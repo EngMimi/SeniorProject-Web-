@@ -20,6 +20,11 @@ class DoctorShell extends StatelessWidget {
       icon: Icons.people_outline,
       path: AppRoutes.doctorPatients,
     ),
+    ShellDestination(
+      label: 'Settings',
+      icon: Icons.settings_outlined,
+      path: AppRoutes.doctorSettings,
+    ),
   ];
 
   @override

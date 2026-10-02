@@ -28,8 +28,11 @@ enum AnalysisStatus {
 
 /// A single test (voice recording, spiral drawing or MRI scan) for a patient.
 ///
-/// Deliberately contains no AI output fields: the real model output schemas
-/// are not confirmed yet.
+/// The voice model is already live (see neuroinsight_pd_app's
+/// VoiceModelService): its real output is carried in [aiPrediction] /
+/// [aiPredictionCode] / [aiProbabilityPd], matching exactly what's stored in
+/// Firestore under a test's `prediction` map. The spiral and MRI models
+/// aren't built yet, so their output schemas stay unconfirmed/null.
 class ClinicalTest {
   const ClinicalTest({
     required this.id,
@@ -38,6 +41,9 @@ class ClinicalTest {
     required this.takenOn,
     required this.status,
     this.analysisCompletedOn,
+    this.aiPrediction,
+    this.aiPredictionCode,
+    this.aiProbabilityPd,
   });
 
   final String id;
@@ -46,4 +52,11 @@ class ClinicalTest {
   final DateTime takenOn;
   final AnalysisStatus status;
   final DateTime? analysisCompletedOn;
+
+  /// e.g. "PD" or "Healthy" — only populated for voice tests today.
+  final String? aiPrediction;
+  final int? aiPredictionCode;
+  final double? aiProbabilityPd;
+
+  bool get hasVoiceResult => aiPrediction != null;
 }

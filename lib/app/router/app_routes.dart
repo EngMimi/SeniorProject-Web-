@@ -15,12 +15,18 @@ abstract final class AppRoutes {
   static const String doctorPatientsName = 'doctor-patients';
   static const String doctorPatientProfileName = 'doctor-patient-profile';
   static const String doctorTestAnalysisName = 'doctor-test-analysis';
+  static const String doctorCombinedReportName = 'doctor-combined-report';
+  static const String doctorSettings = '$doctorRoot/settings';
+  static const String doctorSettingsName = 'doctor-settings';
 
   static String doctorPatientProfile(String patientId) =>
       '$doctorPatients/$patientId';
 
   static String doctorTestAnalysis(String patientId, String testId) =>
       '${doctorPatientProfile(patientId)}/tests/$testId';
+
+  static String doctorCombinedReport(String patientId) =>
+      '${doctorPatientProfile(patientId)}/combined-report';
 
   // Radiologist
   static const String radiologistRoot = '/radiologist';
@@ -30,6 +36,8 @@ abstract final class AppRoutes {
   static const String radiologistPatientsName = 'radiologist-patients';
   static const String radiologistMriHistoryName = 'radiologist-mri-history';
   static const String radiologistMriUploadName = 'radiologist-mri-upload';
+  static const String radiologistSettings = '$radiologistRoot/settings';
+  static const String radiologistSettingsName = 'radiologist-settings';
 
   static String radiologistMriHistory(String patientId) =>
       '$radiologistPatients/$patientId';

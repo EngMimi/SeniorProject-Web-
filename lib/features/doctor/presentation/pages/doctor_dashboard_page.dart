@@ -6,22 +6,16 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/utils/date_format.dart';
 import '../../../../shared/data/clinical_data_repository.dart';
 import '../../../../shared/models/clinical_test.dart';
-import '../../../../shared/models/diagnostic_report.dart';
 import '../../../../shared/models/patient.dart';
 import '../../../../shared/widgets/clinical/status_badge.dart';
 import '../../../../shared/widgets/future_content.dart';
-import '../../../../shared/widgets/mock_data_notice.dart';
 import '../../../../shared/widgets/page_container.dart';
 import '../../../../shared/widgets/page_header.dart';
 import '../../../../shared/widgets/responsive_table.dart';
 import '../../../../shared/widgets/section_card.dart';
 import '../../../../shared/widgets/summary_card.dart';
 
-typedef _DashboardData = (
-  List<Patient> patients,
-  List<ClinicalTest> tests,
-  List<DiagnosticReport> reports,
-);
+typedef _DashboardData = (List<Patient> patients, List<ClinicalTest> tests);
 
 class DoctorDashboardPage extends StatelessWidget {
   const DoctorDashboardPage({super.key, required this.repository});
@@ -30,25 +24,26 @@ class DoctorDashboardPage extends StatelessWidget {
 
   final ClinicalDataRepository repository;
 
-  Future<_DashboardData> _load() => (
-    repository.getPatients(),
-    repository.getTests(),
-    repository.getReports(),
-  ).wait;
+  Future<_DashboardData> _load() =>
+      (repository.getPatients(), repository.getTests()).wait;
 
   @override
   Widget build(BuildContext context) {
     return FutureContent<_DashboardData>(
       load: _load,
       builder: (context, data) {
-        final (patients, tests, reports) = data;
+        final (patients, tests) = data;
         final patientsById = {for (final p in patients) p.id: p};
         final awaitingReview = tests
             .where((t) => t.status == AnalysisStatus.readyForReview)
             .length;
-        final completedAnalyses = tests.where((t) => t.status.hasResult).length;
-        final drafts = reports
-            .where((r) => r.status == ReportStatus.draft)
+        final reviewed = tests
+            .where((t) => t.status == AnalysisStatus.reviewed)
+            .length;
+        // MRI scans belong to the radiologist's own dashboard/count — this
+        // card is scoped to the doctor's own test types.
+        final voiceAndDrawingCount = tests
+            .where((t) => t.modality != TestModality.mri)
             .length;
 
         return PageContainer(
@@ -59,7 +54,6 @@ class DoctorDashboardPage extends StatelessWidget {
                   'Overview of recent patient tests and AI analyses awaiting '
                   'your clinical review.',
             ),
-            const MockDataNotice(),
             SummaryGrid(
               cards: [
                 SummaryCard(
@@ -69,22 +63,22 @@ class DoctorDashboardPage extends StatelessWidget {
                   caption: 'In your patient list',
                 ),
                 SummaryCard(
-                  label: 'Tests Awaiting Review',
+                  label: 'Total Voice & Drawing Tests',
+                  value: '$voiceAndDrawingCount',
+                  icon: Icons.fact_check_outlined,
+                  caption: 'Across all patients',
+                ),
+                SummaryCard(
+                  label: 'Awaiting Review',
                   value: '$awaitingReview',
                   icon: Icons.rate_review_outlined,
                   caption: 'AI result ready',
                 ),
                 SummaryCard(
-                  label: 'Completed AI Analyses',
-                  value: '$completedAnalyses',
+                  label: 'Reviewed',
+                  value: '$reviewed',
                   icon: Icons.analytics_outlined,
-                  caption: 'Ready for review or reviewed',
-                ),
-                SummaryCard(
-                  label: 'Diagnostic Reports',
-                  value: '${reports.length}',
-                  icon: Icons.description_outlined,
-                  caption: '$drafts draft${drafts == 1 ? '' : 's'}',
+                  caption: 'Report completed',
                 ),
               ],
             ),
@@ -143,6 +137,11 @@ class _RecentActivityTable extends StatelessWidget {
     return TextButton(
       onPressed: () =>
           context.go(AppRoutes.doctorTestAnalysis(test.patientId, test.id)),
+      style: TextButton.styleFrom(
+        padding: EdgeInsets.zero,
+        minimumSize: Size.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
       child: Text(needsReview ? 'Review' : 'Open'),
     );
   }
@@ -169,7 +168,12 @@ class _RecentActivityTable extends StatelessWidget {
           flex: 2,
           cellBuilder: (_, t) => AnalysisStatusBadge(status: t.status),
         ),
-        TableColumnDef(label: 'Action', alignEnd: true, cellBuilder: _action),
+        TableColumnDef(
+          label: 'Action',
+          flex: 2,
+          alignEnd: true,
+          cellBuilder: _action,
+        ),
       ],
       compactRowBuilder: (context, test) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,

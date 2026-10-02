@@ -20,6 +20,11 @@ class RadiologistShell extends StatelessWidget {
       icon: Icons.people_outline,
       path: AppRoutes.radiologistPatients,
     ),
+    ShellDestination(
+      label: 'Settings',
+      icon: Icons.settings_outlined,
+      path: AppRoutes.radiologistSettings,
+    ),
   ];
 
   @override

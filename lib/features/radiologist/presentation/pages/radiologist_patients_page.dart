@@ -9,7 +9,6 @@ import '../../../../shared/models/clinical_test.dart';
 import '../../../../shared/models/patient.dart';
 import '../../../../shared/widgets/clinical/status_badge.dart';
 import '../../../../shared/widgets/future_content.dart';
-import '../../../../shared/widgets/mock_data_notice.dart';
 import '../../../../shared/widgets/page_container.dart';
 import '../../../../shared/widgets/page_header.dart';
 import '../../../../shared/widgets/responsive_table.dart';
@@ -76,7 +75,6 @@ class _RadiologistPatientsPageState extends State<RadiologistPatientsPage> {
                   'Find a patient to view their MRI history or upload a new '
                   'MRI scan.',
             ),
-            const MockDataNotice(),
             SectionCard(
               title: 'Patient List',
               subtitle: '${rows.length} of ${patients.length} patients',
@@ -150,7 +148,12 @@ class _PatientTable extends StatelessWidget {
   Widget _action(BuildContext context, _PatientRow row) => TextButton(
     onPressed: () =>
         context.go(AppRoutes.radiologistMriHistory(row.patient.id)),
-    child: const Text('View MRI History'),
+    style: TextButton.styleFrom(
+      padding: EdgeInsets.zero,
+      minimumSize: Size.zero,
+      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    ),
+    child: const Text('Open Profile'),
   );
 
   String _latestDate(_PatientRow row) => row.latestScan == null
@@ -165,10 +168,14 @@ class _PatientTable extends StatelessWidget {
       columns: [
         TableColumnDef(label: 'Patient', flex: 3, cellBuilder: _nameCell),
         TableColumnDef(
-          label: 'Age / Gender',
+          label: 'National ID',
           flex: 2,
-          cellBuilder: (_, r) =>
-              Text('${r.patient.age} · ${r.patient.gender.label}'),
+          cellBuilder: (_, r) => Text(r.patient.nationalId),
+        ),
+        TableColumnDef(
+          label: 'Hospital file no.',
+          flex: 2,
+          cellBuilder: (_, r) => Text(r.patient.hospitalFileNo),
         ),
         TableColumnDef(
           label: 'MRI scans',
@@ -207,7 +214,7 @@ class _PatientTable extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  '${row.patient.age} · ${row.patient.gender.label} · '
+                  '${row.patient.nationalId} · ${row.patient.hospitalFileNo} · '
                   '${row.scanCount} MRI · Latest: ${_latestDate(row)}',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),

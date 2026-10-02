@@ -13,7 +13,6 @@ import '../../../../shared/widgets/clinical/status_badge.dart';
 import '../../../../shared/widgets/future_content.dart';
 import '../../../../shared/widgets/info_field.dart';
 import '../../../../shared/widgets/message_state.dart';
-import '../../../../shared/widgets/mock_data_notice.dart';
 import '../../../../shared/widgets/page_container.dart';
 import '../../../../shared/widgets/page_header.dart';
 import '../../../../shared/widgets/responsive_table.dart';
@@ -46,7 +45,7 @@ class RadiologistPatientMriHistoryPage extends StatelessWidget {
         final (patient, scans) = data;
         if (patient == null) return const RadiologistPatientNotFound();
 
-        final uploadButton = FilledButton.icon(
+        final uploadButton = OutlinedButton.icon(
           onPressed: () =>
               context.go(AppRoutes.radiologistMriUpload(patient.id)),
           icon: const Icon(Icons.upload_file, size: 18),
@@ -67,15 +66,17 @@ class RadiologistPatientMriHistoryPage extends StatelessWidget {
               subtitle: 'Patient ID ${patient.id} · MRI history',
               actions: [uploadButton],
             ),
-            const MockDataNotice(),
             SectionCard(
               title: 'Patient',
               icon: Icons.person_outline,
               child: InfoGrid(
                 fields: [
                   InfoField(label: 'Patient ID', value: patient.id),
-                  InfoField(label: 'Age', value: '${patient.age}'),
-                  InfoField(label: 'Gender', value: patient.gender.label),
+                  InfoField(label: 'National ID', value: patient.nationalId),
+                  InfoField(
+                    label: 'Hospital file no.',
+                    value: patient.hospitalFileNo,
+                  ),
                   InfoField(label: 'MRI scans', value: '${scans.length}'),
                   InfoField(
                     label: 'Latest MRI',
@@ -92,13 +93,13 @@ class RadiologistPatientMriHistoryPage extends StatelessWidget {
               icon: Icons.image_search_outlined,
               padBody: false,
               child: scans.isEmpty
-                  ? MessageState(
+                  ? const MessageState(
                       icon: Icons.image_search_outlined,
                       title: 'No MRI scans yet',
                       message:
-                          'Upload this patient’s first MRI scan to submit '
-                          'it for AI analysis.',
-                      action: uploadButton,
+                          'Upload this patient’s first MRI scan using the '
+                          '"Upload MRI Scan" button above to submit it for '
+                          'AI analysis.',
                     )
                   : _MriTable(scans: scans),
             ),
@@ -134,6 +135,11 @@ class _MriTable extends StatelessWidget {
 
   Widget _action(BuildContext context, ClinicalTest scan) => TextButton(
     onPressed: () => _showAnalysis(context, scan),
+    style: TextButton.styleFrom(
+      padding: EdgeInsets.zero,
+      minimumSize: Size.zero,
+      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    ),
     child: const Text('View Analysis'),
   );
 

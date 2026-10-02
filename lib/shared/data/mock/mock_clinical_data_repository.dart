@@ -1,4 +1,5 @@
 import '../../models/clinical_test.dart';
+import '../../models/combined_report.dart';
 import '../../models/diagnostic_report.dart';
 import '../../models/patient.dart';
 import '../clinical_data_repository.dart';
@@ -45,4 +46,68 @@ class MockClinicalDataRepository implements ClinicalDataRepository {
   @override
   Future<DiagnosticReport?> getReportForTest(String testId) async =>
       MockClinicalData.reports.where((r) => r.testId == testId).firstOrNull;
+
+  @override
+  Future<void> submitReport({
+    required String patientId,
+    required String testId,
+    required String doctorName,
+    required String title,
+    required String clinicalNotes,
+    required String recommendations,
+    required bool submit,
+  }) async {
+    // Mock data is fictional and read-only for UI development; writes here
+    // are intentionally not persisted. The real Firestore-backed repository
+    // is what actually saves a doctor's report.
+  }
+
+  @override
+  Future<void> addVoiceTest({
+    required String patientId,
+    required String title,
+    required String prediction,
+    required int predictionCode,
+    required double probabilityPd,
+  }) async {
+    // Mock data is read-only; see submitReport above.
+  }
+
+  @override
+  Future<void> addDrawingTest({
+    required String patientId,
+    required String title,
+    required String fileUrl,
+  }) async {
+    // Mock data is read-only; see submitReport above.
+  }
+
+  @override
+  Future<void> addMriTest({
+    required String patientId,
+    required String title,
+    required String fileUrl,
+  }) async {
+    // Mock data is read-only; see submitReport above.
+  }
+
+  @override
+  Future<List<CombinedReport>> getCombinedReports({
+    required String patientId,
+  }) async => const [];
+
+  @override
+  Future<String> submitCombinedReport({
+    String? reportId,
+    required String patientId,
+    required List<String> testIds,
+    required String doctorName,
+    required String title,
+    required String clinicalNotes,
+    required String recommendations,
+    required bool submit,
+  }) async {
+    // Mock data is read-only; see submitReport above.
+    return reportId ?? 'mock-combined-report';
+  }
 }

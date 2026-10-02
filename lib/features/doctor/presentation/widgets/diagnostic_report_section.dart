@@ -8,15 +8,32 @@ import '../../../../shared/widgets/info_field.dart';
 import '../../../../shared/widgets/section_card.dart';
 import '../../../../shared/widgets/ui_only_feedback.dart';
 
+/// Called to persist the report. [submit] is false for "Save Draft" and
+/// true for "Submit Diagnostic Report".
+typedef SaveReport =
+    Future<void> Function({
+      required String title,
+      required String clinicalNotes,
+      required String recommendations,
+      required bool submit,
+    });
+
 /// The doctor's diagnostic report for a test.
 ///
 /// Shows an editable form for new or draft reports and a read-only view for
-/// submitted ones. Saving and submitting are UI-only for now.
+/// submitted ones. [onSave] persists the report; once a submitted report
+/// comes back from the reload it triggers, this switches to the read-only
+/// view automatically.
 class DiagnosticReportSection extends StatelessWidget {
-  const DiagnosticReportSection({super.key, required this.report});
+  const DiagnosticReportSection({
+    super.key,
+    required this.report,
+    required this.onSave,
+  });
 
   /// Existing report for the test, or `null` if none has been started.
   final DiagnosticReport? report;
+  final SaveReport onSave;
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +48,7 @@ class DiagnosticReportSection extends StatelessWidget {
       trailing: ReportStatusBadge(status: report?.status),
       child: report != null && report.status == ReportStatus.submitted
           ? _SubmittedReport(report: report)
-          : _ReportForm(draft: report),
+          : _ReportForm(draft: report, onSave: onSave),
     );
   }
 }
@@ -70,9 +87,10 @@ class _SubmittedReport extends StatelessWidget {
 }
 
 class _ReportForm extends StatefulWidget {
-  const _ReportForm({required this.draft});
+  const _ReportForm({required this.draft, required this.onSave});
 
   final DiagnosticReport? draft;
+  final SaveReport onSave;
 
   @override
   State<_ReportForm> createState() => _ReportFormState();
@@ -90,6 +108,7 @@ class _ReportFormState extends State<_ReportForm> {
     text: widget.draft?.recommendations,
   );
   AutovalidateMode _autovalidateMode = AutovalidateMode.disabled;
+  bool _saving = false;
 
   @override
   void dispose() {
@@ -99,24 +118,37 @@ class _ReportFormState extends State<_ReportForm> {
     super.dispose();
   }
 
-  void _saveDraft() {
-    // TODO: Persist the draft once the backend structure is confirmed.
-    showUiOnlyMessage(
-      context,
-      'Saving drafts is not available yet. This form is UI-only.',
-    );
-  }
-
-  void _submit() {
-    if (!_formKey.currentState!.validate()) {
+  Future<void> _save({required bool submit}) async {
+    if (submit && !_formKey.currentState!.validate()) {
       setState(() => _autovalidateMode = AutovalidateMode.onUserInteraction);
       return;
     }
-    // TODO: Submit the report once the backend structure is confirmed.
-    showUiOnlyMessage(
-      context,
-      'Submitting reports is not available yet. This form is UI-only.',
-    );
+    // A draft can be saved with an empty title/notes; only submitting
+    // requires the form to be filled in.
+    setState(() => _saving = true);
+    try {
+      await widget.onSave(
+        title: _titleController.text.trim(),
+        clinicalNotes: _notesController.text.trim(),
+        recommendations: _recommendationsController.text.trim(),
+        submit: submit,
+      );
+      if (!mounted) return;
+      showUiOnlyMessage(
+        context,
+        submit
+            ? 'Report submitted. It is now visible to the patient.'
+            : 'Draft saved.',
+      );
+    } catch (_) {
+      if (!mounted) return;
+      showUiOnlyMessage(
+        context,
+        'Could not save the report. Please try again.',
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 
   String? _required(String? value, String message) =>
@@ -176,15 +208,21 @@ class _ReportFormState extends State<_ReportForm> {
             runSpacing: AppSpacing.sm,
             children: [
               OutlinedButton(
-                onPressed: _saveDraft,
+                onPressed: _saving ? null : () => _save(submit: false),
                 style: OutlinedButton.styleFrom(
                   minimumSize: const Size(64, 48),
                 ),
                 child: const Text('Save Draft'),
               ),
               FilledButton(
-                onPressed: _submit,
-                child: const Text('Submit Diagnostic Report'),
+                onPressed: _saving ? null : () => _save(submit: true),
+                child: _saving
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Submit Diagnostic Report'),
               ),
             ],
           ),

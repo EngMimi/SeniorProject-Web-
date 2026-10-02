@@ -6,7 +6,7 @@ import '../../../../core/responsive/responsive_layout.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_spacing.dart';
-import '../widgets/dev_access_panel.dart';
+import '../../data/auth_service.dart';
 import '../widgets/login_form.dart';
 
 const _appName = 'NeuroInsight-PD';
@@ -16,8 +16,9 @@ const _maxContentWidth = 420.0;
 
 /// Welcome/sign-in page of the web portal for doctors and radiologists.
 ///
-/// Sign-in is not connected to authentication yet. The user's role will come
-/// from authentication, so there is intentionally no role selection here.
+/// Signs in through [AuthService.instance]. Once sign-in succeeds, the
+/// router's redirect (listening to the same [AuthService]) takes the user to
+/// their role's dashboard — there is intentionally no role selection here.
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
 
@@ -49,8 +50,7 @@ class LoginPage extends StatelessWidget {
   }
 }
 
-/// Scrollable, width-constrained column holding the sign-in card and the
-/// development panel.
+/// Scrollable, width-constrained column holding the sign-in card.
 class _SignInColumn extends StatelessWidget {
   const _SignInColumn({required this.padding, this.header});
 
@@ -67,12 +67,7 @@ class _SignInColumn extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              ?header,
-              const _SignInCard(),
-              const SizedBox(height: AppSpacing.lg),
-              const DevAccessPanel(),
-            ],
+            children: [?header, const _SignInCard()],
           ),
         ),
       ),
@@ -80,21 +75,28 @@ class _SignInColumn extends StatelessWidget {
   }
 }
 
-class _SignInCard extends StatelessWidget {
+class _SignInCard extends StatefulWidget {
   const _SignInCard();
 
-  void _onSubmit(BuildContext context) {
-    // TODO: Replace with real authentication once the backend is confirmed.
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Sign-in is not available yet. Authentication has not been '
-            'connected.',
-          ),
-        ),
-      );
+  @override
+  State<_SignInCard> createState() => _SignInCardState();
+}
+
+class _SignInCardState extends State<_SignInCard> {
+  bool _submitting = false;
+
+  Future<void> _onSubmit(String employeeId, String password) async {
+    setState(() => _submitting = true);
+    final error = await AuthService.instance.signIn(employeeId, password);
+    if (!mounted) return;
+    setState(() => _submitting = false);
+    if (error != null) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(error)));
+    }
+    // On success the router's redirect (listening to AuthService) takes the
+    // user to their dashboard automatically — nothing else to do here.
   }
 
   @override
@@ -123,7 +125,13 @@ class _SignInCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: AppSpacing.lg),
-            LoginForm(onSubmit: (_, _) => _onSubmit(context)),
+            if (_submitting)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else
+              LoginForm(onSubmit: _onSubmit),
           ],
         ),
       ),

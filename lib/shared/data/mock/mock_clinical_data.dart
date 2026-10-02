@@ -11,44 +11,44 @@ abstract final class MockClinicalData {
     Patient(
       id: 'PT-DEMO-001',
       fullName: 'Alex Sample',
-      age: 67,
-      gender: Gender.male,
-      registeredOn: DateTime(2026, 3, 2),
+      nationalId: '1000000001',
+      dateOfBirth: '02 / 03 / 1959',
+      hospitalFileNo: 'KAU-2026-1001',
     ),
     Patient(
       id: 'PT-DEMO-002',
       fullName: 'Jamie Example',
-      age: 72,
-      gender: Gender.female,
-      registeredOn: DateTime(2026, 3, 18),
+      nationalId: '1000000002',
+      dateOfBirth: '18 / 06 / 1954',
+      hospitalFileNo: 'KAU-2026-1002',
     ),
     Patient(
       id: 'PT-DEMO-003',
       fullName: 'Morgan Testcase',
-      age: 59,
-      gender: Gender.female,
-      registeredOn: DateTime(2026, 4, 7),
+      nationalId: '1000000003',
+      dateOfBirth: '07 / 09 / 1967',
+      hospitalFileNo: 'KAU-2026-1003',
     ),
     Patient(
       id: 'PT-DEMO-004',
       fullName: 'Riley Placeholder',
-      age: 64,
-      gender: Gender.male,
-      registeredOn: DateTime(2026, 5, 12),
+      nationalId: '1000000004',
+      dateOfBirth: '12 / 01 / 1962',
+      hospitalFileNo: 'KAU-2026-1004',
     ),
     Patient(
       id: 'PT-DEMO-005',
       fullName: 'Casey Demo',
-      age: 70,
-      gender: Gender.female,
-      registeredOn: DateTime(2026, 6, 3),
+      nationalId: '1000000005',
+      dateOfBirth: '03 / 11 / 1956',
+      hospitalFileNo: 'KAU-2026-1005',
     ),
     Patient(
       id: 'PT-DEMO-006',
       fullName: 'Taylor Mockwell',
-      age: 61,
-      gender: Gender.male,
-      registeredOn: DateTime(2026, 7, 21),
+      nationalId: '1000000006',
+      dateOfBirth: '21 / 04 / 1965',
+      hospitalFileNo: 'KAU-2026-1006',
     ),
   ];
 
@@ -60,6 +60,9 @@ abstract final class MockClinicalData {
       DateTime(2026, 9, 24),
       AnalysisStatus.readyForReview,
       DateTime(2026, 9, 24),
+      aiPrediction: 'PD',
+      aiPredictionCode: 1,
+      aiProbabilityPd: 0.8671,
     ),
     _test(
       '0002',
@@ -83,6 +86,9 @@ abstract final class MockClinicalData {
       DateTime(2026, 8, 20),
       AnalysisStatus.reviewed,
       DateTime(2026, 8, 20),
+      aiPrediction: 'Healthy',
+      aiPredictionCode: 0,
+      aiProbabilityPd: 0.12,
     ),
     _test(
       '0005',
@@ -114,6 +120,9 @@ abstract final class MockClinicalData {
       DateTime(2026, 9, 21),
       AnalysisStatus.reviewed,
       DateTime(2026, 9, 21),
+      aiPrediction: 'PD',
+      aiPredictionCode: 1,
+      aiProbabilityPd: 0.7312,
     ),
     _test(
       '0009',
@@ -137,6 +146,9 @@ abstract final class MockClinicalData {
       DateTime(2026, 9, 18),
       AnalysisStatus.readyForReview,
       DateTime(2026, 9, 18),
+      aiPrediction: 'Healthy',
+      aiPredictionCode: 0,
+      aiProbabilityPd: 0.08,
     ),
     _test(
       '0012',
@@ -152,6 +164,9 @@ abstract final class MockClinicalData {
       DateTime(2026, 8, 28),
       AnalysisStatus.reviewed,
       DateTime(2026, 8, 28),
+      aiPrediction: 'PD',
+      aiPredictionCode: 1,
+      aiProbabilityPd: 0.9104,
     ),
     _test(
       '0014',
@@ -216,6 +231,9 @@ abstract final class MockClinicalData {
     DateTime takenOn,
     AnalysisStatus status, [
     DateTime? analysisCompletedOn,
+    String? aiPrediction,
+    int? aiPredictionCode,
+    double? aiProbabilityPd,
   ]) => ClinicalTest(
     id: 'TS-DEMO-$number',
     patientId: patientId,
@@ -223,6 +241,9 @@ abstract final class MockClinicalData {
     takenOn: takenOn,
     status: status,
     analysisCompletedOn: analysisCompletedOn,
+    aiPrediction: aiPrediction,
+    aiPredictionCode: aiPredictionCode,
+    aiProbabilityPd: aiProbabilityPd,
   );
 
   static DiagnosticReport _report(

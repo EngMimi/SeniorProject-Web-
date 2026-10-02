@@ -9,7 +9,6 @@ import '../../../../shared/models/clinical_test.dart';
 import '../../../../shared/models/patient.dart';
 import '../../../../shared/widgets/clinical/status_badge.dart';
 import '../../../../shared/widgets/future_content.dart';
-import '../../../../shared/widgets/mock_data_notice.dart';
 import '../../../../shared/widgets/page_container.dart';
 import '../../../../shared/widgets/page_header.dart';
 import '../../../../shared/widgets/responsive_table.dart';
@@ -38,15 +37,20 @@ class RadiologistDashboardPage extends StatelessWidget {
       builder: (context, data) {
         final (patients, scans) = data;
         final patientsById = {for (final p in patients) p.id: p};
-        final patientsWithScans = scans.map((s) => s.patientId).toSet().length;
-        final awaitingAnalysis = scans
+        // MRI has no "reviewed/report" step yet (that's the doctor's
+        // combined report, not something radiologists do here), so this
+        // dashboard tracks the AI pipeline stage instead: waiting on the
+        // model vs. the model's result being ready to read.
+        final waitingForAnalysis = scans
             .where(
               (s) =>
                   s.status == AnalysisStatus.pending ||
                   s.status == AnalysisStatus.processing,
             )
             .length;
-        final completed = scans.where((s) => s.status.hasResult).length;
+        final analysisReady = scans
+            .where((s) => s.status == AnalysisStatus.readyForReview)
+            .length;
 
         return PageContainer(
           children: [
@@ -56,32 +60,31 @@ class RadiologistDashboardPage extends StatelessWidget {
                   'Overview of MRI scans and their AI analysis status. Upload '
                   'new scans from a patient’s MRI history.',
             ),
-            const MockDataNotice(),
             SummaryGrid(
               cards: [
                 SummaryCard(
-                  label: 'Relevant Patients',
+                  label: 'Total Patients',
                   value: '${patients.length}',
                   icon: Icons.people_outline,
-                  caption: '$patientsWithScans with MRI scans',
+                  caption: 'In your patient list',
                 ),
                 SummaryCard(
-                  label: 'MRI Scans',
+                  label: 'Total MRI Scans',
                   value: '${scans.length}',
                   icon: Icons.image_search_outlined,
                   caption: 'Across all patients',
                 ),
                 SummaryCard(
-                  label: 'Awaiting Analysis',
-                  value: '$awaitingAnalysis',
+                  label: 'Waiting for Analysis',
+                  value: '$waitingForAnalysis',
                   icon: Icons.hourglass_empty,
                   caption: 'Pending or processing',
                 ),
                 SummaryCard(
-                  label: 'Completed Analyses',
-                  value: '$completed',
+                  label: 'Analysis Ready',
+                  value: '$analysisReady',
                   icon: Icons.analytics_outlined,
-                  caption: 'AI result available',
+                  caption: 'AI result ready',
                 ),
               ],
             ),
@@ -136,6 +139,11 @@ class _RecentMriTable extends StatelessWidget {
   Widget _action(BuildContext context, ClinicalTest scan) => TextButton(
     onPressed: () =>
         context.go(AppRoutes.radiologistMriHistory(scan.patientId)),
+    style: TextButton.styleFrom(
+      padding: EdgeInsets.zero,
+      minimumSize: Size.zero,
+      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    ),
     child: const Text('View MRI History'),
   );
 

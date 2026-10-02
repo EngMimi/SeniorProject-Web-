@@ -1,3 +1,4 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -6,21 +7,23 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../shared/data/clinical_data_repository.dart';
+import '../../../../shared/data/cloudinary_upload_service.dart';
 import '../../../../shared/models/patient.dart';
 import '../../../../shared/widgets/breadcrumbs.dart';
 import '../../../../shared/widgets/future_content.dart';
 import '../../../../shared/widgets/info_field.dart';
-import '../../../../shared/widgets/mock_data_notice.dart';
 import '../../../../shared/widgets/page_container.dart';
 import '../../../../shared/widgets/page_header.dart';
 import '../../../../shared/widgets/section_card.dart';
 import '../../../../shared/widgets/ui_only_feedback.dart';
 import 'radiologist_patient_mri_history_page.dart';
 
-/// MRI scan upload and submission for AI analysis. UI only.
+/// MRI scan upload and submission for AI analysis.
 ///
-/// File selection, accepted formats, size limits, storage and the analysis
-/// pipeline are not confirmed, so none of them are implemented or assumed.
+/// The upload itself is real (the file goes to Cloudinary and the test
+/// record is created, same as the doctor's spiral-drawing upload) — only
+/// the analysis pipeline isn't, since no MRI model exists yet. A submitted
+/// scan is created pending review, like the drawing upload.
 class RadiologistMriUploadPage extends StatelessWidget {
   const RadiologistMriUploadPage({
     super.key,
@@ -43,7 +46,11 @@ class RadiologistMriUploadPage extends StatelessWidget {
         if (patient == null) return const RadiologistPatientNotFound();
 
         final historyLocation = AppRoutes.radiologistMriHistory(patient.id);
-        final uploadCard = _UploadCard(historyLocation: historyLocation);
+        final uploadCard = _UploadCard(
+          patientId: patient.id,
+          repository: repository,
+          historyLocation: historyLocation,
+        );
         final patientCard = SectionCard(
           title: 'Patient',
           icon: Icons.person_outline,
@@ -71,7 +78,6 @@ class RadiologistMriUploadPage extends StatelessWidget {
               title: 'Upload MRI Scan',
               subtitle: 'For ${patient.fullName} · ${patient.id}',
             ),
-            const MockDataNotice(),
             LayoutBuilder(
               builder: (context, constraints) {
                 if (constraints.maxWidth < _twoColumnMinWidth) {
@@ -105,14 +111,79 @@ class RadiologistMriUploadPage extends StatelessWidget {
   }
 }
 
-class _UploadCard extends StatelessWidget {
-  const _UploadCard({required this.historyLocation});
+class _UploadCard extends StatefulWidget {
+  const _UploadCard({
+    required this.patientId,
+    required this.repository,
+    required this.historyLocation,
+  });
 
+  final String patientId;
+  final ClinicalDataRepository repository;
   final String historyLocation;
+
+  @override
+  State<_UploadCard> createState() => _UploadCardState();
+}
+
+class _UploadCardState extends State<_UploadCard> {
+  PlatformFile? _picked;
+  bool _submitting = false;
+
+  Future<void> _selectFile() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['png', 'jpg', 'jpeg', 'pdf'],
+      withData: true,
+    );
+    if (result == null || result.files.isEmpty) return;
+    final file = result.files.first;
+    if (file.bytes == null) {
+      if (!mounted) return;
+      showUiOnlyMessage(context, 'Could not read that file. Please try again.');
+      return;
+    }
+    setState(() => _picked = file);
+  }
+
+  Future<void> _submit() async {
+    final file = _picked;
+    if (file == null) {
+      showUiOnlyMessage(context, 'Select an MRI scan file first.');
+      return;
+    }
+    setState(() => _submitting = true);
+    try {
+      final url = await CloudinaryUploadService.instance.uploadImage(
+        bytes: file.bytes!,
+        filename: file.name,
+      );
+      await widget.repository.addMriTest(
+        patientId: widget.patientId,
+        title: file.name,
+        fileUrl: url,
+      );
+      if (!mounted) return;
+      showUiOnlyMessage(
+        context,
+        'MRI scan uploaded. It will be analyzed once the MRI model is '
+        'ready.',
+      );
+      context.go(widget.historyLocation);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _submitting = false);
+      showUiOnlyMessage(
+        context,
+        e.toString().replaceFirst('Exception: ', ''),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final picked = _picked;
 
     return SectionCard(
       title: 'MRI Scan',
@@ -137,37 +208,33 @@ class _UploadCard extends StatelessWidget {
                 child: Column(
                   spacing: AppSpacing.sm,
                   children: [
-                    const Icon(
-                      Icons.upload_file,
+                    Icon(
+                      picked == null ? Icons.upload_file : Icons.image_outlined,
                       size: 36,
                       color: AppColors.accentBlue,
                     ),
                     Text(
-                      'No file selected',
+                      picked?.name ?? 'No file selected',
                       textAlign: TextAlign.center,
                       style: theme.textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    Text(
-                      'File selection is not connected yet. Accepted file '
-                      'formats and size limits will be shown here once they '
-                      'are confirmed.',
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
+                    if (picked == null)
+                      Text(
+                        'Accepted formats: PNG, JPG, JPEG, PDF.',
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
                       ),
-                    ),
                     const SizedBox(height: AppSpacing.xs),
-                    // TODO: Connect file selection once upload requirements
-                    // are confirmed.
                     OutlinedButton.icon(
-                      onPressed: () => showUiOnlyMessage(
-                        context,
-                        'File selection is not connected yet.',
-                      ),
+                      onPressed: _submitting ? null : _selectFile,
                       icon: const Icon(Icons.folder_open_outlined, size: 18),
-                      label: const Text('Select MRI Scan File'),
+                      label: Text(
+                        picked == null ? 'Select MRI Scan File' : 'Choose a different file',
+                      ),
                     ),
                   ],
                 ),
@@ -180,22 +247,24 @@ class _UploadCard extends StatelessWidget {
             runSpacing: AppSpacing.sm,
             children: [
               OutlinedButton(
-                onPressed: () => context.go(historyLocation),
+                onPressed: _submitting
+                    ? null
+                    : () => context.go(widget.historyLocation),
                 style: OutlinedButton.styleFrom(
                   minimumSize: const Size(64, 48),
                 ),
                 child: const Text('Cancel'),
               ),
-              // TODO: Upload and submit once storage and the analysis
-              // pipeline are confirmed.
               FilledButton.icon(
-                onPressed: () => showUiOnlyMessage(
-                  context,
-                  'MRI upload and AI analysis are not connected yet. No file '
-                  'has been uploaded or submitted.',
-                ),
-                icon: const Icon(Icons.send_outlined, size: 18),
-                label: const Text('Submit for Analysis'),
+                onPressed: _submitting ? null : _submit,
+                icon: _submitting
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.send_outlined, size: 18),
+                label: Text(_submitting ? 'Uploading...' : 'Submit for Analysis'),
               ),
             ],
           ),
@@ -250,8 +319,9 @@ class _NextStepsCard extends StatelessWidget {
               ],
             ),
           Text(
-            'Uploading and analysis are not connected yet in this version. '
-            'AI results are decision-support information only; diagnostic '
+            'AI analysis is not connected yet — the scan is stored and '
+            'marked pending until a model is ready to review it. AI '
+            'results are decision-support information only; diagnostic '
             'decisions remain with the treating doctor.',
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,

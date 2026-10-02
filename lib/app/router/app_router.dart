@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/auth/data/auth_service.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
+import '../../features/auth/presentation/pages/settings_page.dart';
+import '../../features/doctor/presentation/pages/doctor_combined_report_page.dart';
 import '../../features/doctor/presentation/pages/doctor_dashboard_page.dart';
 import '../../features/doctor/presentation/pages/doctor_patient_profile_page.dart';
 import '../../features/doctor/presentation/pages/doctor_patients_page.dart';
@@ -13,23 +16,62 @@ import '../../features/radiologist/presentation/pages/radiologist_patient_mri_hi
 import '../../features/radiologist/presentation/pages/radiologist_patients_page.dart';
 import '../../features/radiologist/presentation/shell/radiologist_shell.dart';
 import '../../shared/data/clinical_data_repository.dart';
-import '../../shared/data/mock/mock_clinical_data_repository.dart';
+import '../../shared/data/firebase/firebase_clinical_data_repository.dart';
 import 'app_routes.dart';
 
 /// Builds the application router.
 ///
 /// Each role has its own [ShellRoute], so Doctor and Radiologist screens are
-/// wrapped by separate shells. No auth guard exists yet; one can be added
-/// later via [GoRouter.redirect].
+/// wrapped by separate shells. [AuthService.instance] gates every Doctor and
+/// Radiologist route: signed-out visitors are sent to [AppRoutes.login], and
+/// a signed-in account is kept inside its own role's section.
 ///
-/// [repository] defaults to fictional mock data until the real backend is
-/// integrated.
+/// [repository] defaults to the real Firestore-backed repository (same
+/// Firebase project as the Patient Mobile Application). Pass a
+/// [MockClinicalDataRepository] instead for widget tests.
 GoRouter createAppRouter({
   String initialLocation = AppRoutes.initial,
-  ClinicalDataRepository repository = const MockClinicalDataRepository(),
+  ClinicalDataRepository? repository,
 }) {
+  final repo = repository ?? FirebaseClinicalDataRepository();
+
   return GoRouter(
     initialLocation: initialLocation,
+    refreshListenable: AuthService.instance,
+    redirect: (context, state) {
+      final auth = AuthService.instance;
+      // Auth state hasn't resolved yet (first frame); don't redirect until
+      // we actually know whether someone is signed in.
+      if (auth.loading) return null;
+
+      final atLogin = state.matchedLocation == AppRoutes.login;
+
+      if (!auth.isSignedIn) {
+        return atLogin ? null : AppRoutes.login;
+      }
+
+      if (atLogin) {
+        return auth.role == StaffRole.doctor
+            ? AppRoutes.doctorDashboard
+            : AppRoutes.radiologistDashboard;
+      }
+
+      final inDoctorArea = state.matchedLocation.startsWith(
+        AppRoutes.doctorRoot,
+      );
+      final inRadiologistArea = state.matchedLocation.startsWith(
+        AppRoutes.radiologistRoot,
+      );
+
+      if (inDoctorArea && auth.role != StaffRole.doctor) {
+        return AppRoutes.radiologistDashboard;
+      }
+      if (inRadiologistArea && auth.role != StaffRole.radiologist) {
+        return AppRoutes.doctorDashboard;
+      }
+
+      return null;
+    },
     routes: [
       GoRoute(
         path: AppRoutes.login,
@@ -48,21 +90,19 @@ GoRouter createAppRouter({
           GoRoute(
             path: AppRoutes.doctorDashboard,
             name: AppRoutes.doctorDashboardName,
-            builder: (context, state) =>
-                DoctorDashboardPage(repository: repository),
+            builder: (context, state) => DoctorDashboardPage(repository: repo),
           ),
           GoRoute(
             path: AppRoutes.doctorPatients,
             name: AppRoutes.doctorPatientsName,
-            builder: (context, state) =>
-                DoctorPatientsPage(repository: repository),
+            builder: (context, state) => DoctorPatientsPage(repository: repo),
             routes: [
               GoRoute(
                 path: ':${AppRoutes.patientIdParam}',
                 name: AppRoutes.doctorPatientProfileName,
                 builder: (context, state) => DoctorPatientProfilePage(
                   patientId: state.pathParameters[AppRoutes.patientIdParam]!,
-                  repository: repository,
+                  repository: repo,
                 ),
                 routes: [
                   GoRoute(
@@ -72,12 +112,26 @@ GoRouter createAppRouter({
                       patientId:
                           state.pathParameters[AppRoutes.patientIdParam]!,
                       testId: state.pathParameters[AppRoutes.testIdParam]!,
-                      repository: repository,
+                      repository: repo,
+                    ),
+                  ),
+                  GoRoute(
+                    path: 'combined-report',
+                    name: AppRoutes.doctorCombinedReportName,
+                    builder: (context, state) => DoctorCombinedReportPage(
+                      patientId:
+                          state.pathParameters[AppRoutes.patientIdParam]!,
+                      repository: repo,
                     ),
                   ),
                 ],
               ),
             ],
+          ),
+          GoRoute(
+            path: AppRoutes.doctorSettings,
+            name: AppRoutes.doctorSettingsName,
+            builder: (context, state) => const SettingsPage(),
           ),
         ],
       ),
@@ -94,20 +148,20 @@ GoRouter createAppRouter({
             path: AppRoutes.radiologistDashboard,
             name: AppRoutes.radiologistDashboardName,
             builder: (context, state) =>
-                RadiologistDashboardPage(repository: repository),
+                RadiologistDashboardPage(repository: repo),
           ),
           GoRoute(
             path: AppRoutes.radiologistPatients,
             name: AppRoutes.radiologistPatientsName,
             builder: (context, state) =>
-                RadiologistPatientsPage(repository: repository),
+                RadiologistPatientsPage(repository: repo),
             routes: [
               GoRoute(
                 path: ':${AppRoutes.patientIdParam}',
                 name: AppRoutes.radiologistMriHistoryName,
                 builder: (context, state) => RadiologistPatientMriHistoryPage(
                   patientId: state.pathParameters[AppRoutes.patientIdParam]!,
-                  repository: repository,
+                  repository: repo,
                 ),
                 routes: [
                   GoRoute(
@@ -116,12 +170,17 @@ GoRouter createAppRouter({
                     builder: (context, state) => RadiologistMriUploadPage(
                       patientId:
                           state.pathParameters[AppRoutes.patientIdParam]!,
-                      repository: repository,
+                      repository: repo,
                     ),
                   ),
                 ],
               ),
             ],
+          ),
+          GoRoute(
+            path: AppRoutes.radiologistSettings,
+            name: AppRoutes.radiologistSettingsName,
+            builder: (context, state) => const SettingsPage(),
           ),
         ],
       ),

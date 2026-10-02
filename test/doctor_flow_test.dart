@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:neuroinsight_pd_web/app/app.dart';
 import 'package:neuroinsight_pd_web/app/router/app_router.dart';
 import 'package:neuroinsight_pd_web/app/router/app_routes.dart';
+import 'package:neuroinsight_pd_web/features/auth/data/auth_service.dart';
+import 'package:neuroinsight_pd_web/shared/data/mock/mock_clinical_data_repository.dart';
 import 'package:neuroinsight_pd_web/shared/widgets/clinical/clinical_notice.dart';
 
 // Fictional IDs from MockClinicalData.
@@ -19,7 +21,14 @@ Future<void> _pumpAt(
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
 
-  final router = createAppRouter(initialLocation: location);
+  // Fake, already-signed-in doctor account — the real AuthService only
+  // runs against Firebase, which these widget tests never touch.
+  AuthService.debugSetInstance(AuthService.debug(role: StaffRole.doctor));
+
+  final router = createAppRouter(
+    initialLocation: location,
+    repository: const MockClinicalDataRepository(),
+  );
   addTearDown(router.dispose);
 
   await tester.pumpWidget(NeuroInsightApp(router: router));
@@ -41,15 +50,16 @@ void main() {
       await _pumpAt(tester, AppRoutes.doctorDashboard);
 
       expect(find.text('Doctor Dashboard'), findsOneWidget);
-      expect(find.textContaining('Mock data'), findsOneWidget);
       for (final label in [
         'Total Patients',
-        'Tests Awaiting Review',
-        'Completed AI Analyses',
-        'Diagnostic Reports',
+        'Total Voice & Drawing Tests',
+        'Awaiting Review',
       ]) {
         expect(find.text(label), findsOneWidget);
       }
+      // "Reviewed" is also a status-badge label, so several mock tests show
+      // it in the activity table below the summary card.
+      expect(find.text('Reviewed'), findsWidgets);
       expect(find.text('Recent Test Activity'), findsOneWidget);
       // Table header is shown on wide layouts.
       expect(find.text('Analysis status'), findsOneWidget);
@@ -118,7 +128,7 @@ void main() {
 
       await tester.tap(find.text('Upload Voice Recording'));
       await tester.pump();
-      expect(find.textContaining('not available yet'), findsOneWidget);
+      expect(find.textContaining('not available'), findsOneWidget);
     });
 
     testWidgets('patient without tests shows an empty state', (tester) async {
@@ -153,7 +163,7 @@ void main() {
       expect(find.text(aiDecisionSupportNotice), findsOneWidget);
     });
 
-    testWidgets('report form renders and validates required fields', (
+    testWidgets('voice test shows the real model output, not a placeholder', (
       tester,
     ) async {
       await _pumpAt(
@@ -162,8 +172,21 @@ void main() {
       );
 
       expect(find.text('Voice Analysis'), findsOneWidget);
-      expect(find.text('MOCK DATA'), findsWidgets);
       expect(find.text(aiDecisionSupportNotice), findsOneWidget);
+      // The voice model is live, so this test's AI card shows a real
+      // prediction rather than the "MOCK DATA" placeholder.
+      expect(find.text('Voice model output'), findsOneWidget);
+      expect(find.text('MOCK DATA'), findsNothing);
+    });
+
+    testWidgets('report form renders and validates required fields', (
+      tester,
+    ) async {
+      await _pumpAt(
+        tester,
+        AppRoutes.doctorTestAnalysis(_alexId, _alexVoiceReadyTest),
+      );
+
       expect(find.text('Report title'), findsOneWidget);
       expect(find.text('Clinical notes / assessment'), findsOneWidget);
       expect(find.text('Recommendations (optional)'), findsOneWidget);

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/app_routes.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/utils/date_format.dart';
+import '../../../../features/auth/data/auth_service.dart';
 import '../../../../shared/data/clinical_data_repository.dart';
 import '../../../../shared/models/clinical_test.dart';
 import '../../../../shared/models/diagnostic_report.dart';
@@ -14,7 +15,6 @@ import '../../../../shared/widgets/clinical/status_badge.dart';
 import '../../../../shared/widgets/future_content.dart';
 import '../../../../shared/widgets/info_field.dart';
 import '../../../../shared/widgets/message_state.dart';
-import '../../../../shared/widgets/mock_data_notice.dart';
 import '../../../../shared/widgets/page_container.dart';
 import '../../../../shared/widgets/page_header.dart';
 import '../../../../shared/widgets/section_card.dart';
@@ -28,7 +28,7 @@ typedef _AnalysisData = (
 );
 
 /// AI analysis result and diagnostic report for one test.
-class DoctorTestAnalysisPage extends StatelessWidget {
+class DoctorTestAnalysisPage extends StatefulWidget {
   const DoctorTestAnalysisPage({
     super.key,
     required this.patientId,
@@ -43,16 +43,46 @@ class DoctorTestAnalysisPage extends StatelessWidget {
   final String testId;
   final ClinicalDataRepository repository;
 
+  @override
+  State<DoctorTestAnalysisPage> createState() =>
+      _DoctorTestAnalysisPageState();
+}
+
+class _DoctorTestAnalysisPageState extends State<DoctorTestAnalysisPage> {
+  /// Bumped after a report is saved so [FutureContent] below reloads with a
+  /// fresh key instead of showing the data from before the save.
+  int _reloadToken = 0;
+
   Future<_AnalysisData> _load() => (
-    repository.getPatient(patientId),
-    repository.getTest(testId),
-    repository.getReportForTest(testId),
+    widget.repository.getPatient(widget.patientId),
+    widget.repository.getTest(widget.testId),
+    widget.repository.getReportForTest(widget.testId),
   ).wait;
+
+  Future<void> _saveReport({
+    required String title,
+    required String clinicalNotes,
+    required String recommendations,
+    required bool submit,
+  }) async {
+    final doctorName = AuthService.instance.displayName ?? 'Doctor';
+    await widget.repository.submitReport(
+      patientId: widget.patientId,
+      testId: widget.testId,
+      doctorName: doctorName,
+      title: title,
+      clinicalNotes: clinicalNotes,
+      recommendations: recommendations,
+      submit: submit,
+    );
+    if (!mounted) return;
+    setState(() => _reloadToken++);
+  }
 
   @override
   Widget build(BuildContext context) {
     return FutureContent<_AnalysisData>(
-      key: ValueKey('$patientId/$testId'),
+      key: ValueKey('${widget.patientId}/${widget.testId}/$_reloadToken'),
       load: _load,
       builder: (context, data) {
         final (patient, test, report) = data;
@@ -66,6 +96,7 @@ class DoctorTestAnalysisPage extends StatelessWidget {
         final reportSection = DiagnosticReportSection(
           key: ValueKey(test.id),
           report: report,
+          onSave: _saveReport,
         );
 
         return PageContainer(
@@ -85,10 +116,10 @@ class DoctorTestAnalysisPage extends StatelessWidget {
               title: test.modality.analysisTitle,
               subtitle: 'Test ${test.id} · ${formatDate(test.takenOn)}',
             ),
-            const MockDataNotice(),
             LayoutBuilder(
               builder: (context, constraints) {
-                if (constraints.maxWidth < _twoColumnMinWidth) {
+                if (constraints.maxWidth <
+                    DoctorTestAnalysisPage._twoColumnMinWidth) {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     spacing: AppSpacing.lg,

@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:neuroinsight_pd_web/app/app.dart';
 import 'package:neuroinsight_pd_web/app/router/app_router.dart';
 import 'package:neuroinsight_pd_web/app/router/app_routes.dart';
+import 'package:neuroinsight_pd_web/features/auth/data/auth_service.dart';
+import 'package:neuroinsight_pd_web/shared/data/mock/mock_clinical_data_repository.dart';
 import 'package:neuroinsight_pd_web/shared/widgets/clinical/clinical_notice.dart';
 
 // Fictional IDs from MockClinicalData.
@@ -30,7 +32,16 @@ Future<void> _pumpAt(
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
 
-  final router = createAppRouter(initialLocation: location);
+  // Fake, already-signed-in radiologist account — the real AuthService
+  // only runs against Firebase, which these widget tests never touch.
+  AuthService.debugSetInstance(
+    AuthService.debug(role: StaffRole.radiologist),
+  );
+
+  final router = createAppRouter(
+    initialLocation: location,
+    repository: const MockClinicalDataRepository(),
+  );
   addTearDown(router.dispose);
 
   await tester.pumpWidget(NeuroInsightApp(router: router));
@@ -56,12 +67,11 @@ void main() {
       await _pumpAt(tester, AppRoutes.radiologistDashboard);
 
       expect(find.text('Radiologist Dashboard'), findsOneWidget);
-      expect(find.textContaining('Mock data'), findsOneWidget);
       for (final label in [
-        'Relevant Patients',
-        'MRI Scans',
-        'Awaiting Analysis',
-        'Completed Analyses',
+        'Total Patients',
+        'Total MRI Scans',
+        'Waiting for Analysis',
+        'Analysis Ready',
       ]) {
         expect(find.text(label), findsOneWidget);
       }
@@ -94,11 +104,11 @@ void main() {
       await _pumpAt(tester, AppRoutes.radiologistPatients);
 
       expect(find.text('Patient List'), findsOneWidget);
-      expect(find.text('View MRI History'), findsNWidgets(6));
+      expect(find.text('Open Profile'), findsNWidgets(6));
 
       await tester.enterText(find.byType(TextField), 'PT-DEMO-002');
       await tester.pumpAndSettle();
-      expect(find.text('View MRI History'), findsOneWidget);
+      expect(find.text('Open Profile'), findsOneWidget);
 
       await tester.enterText(find.byType(TextField), 'nobody');
       await tester.pumpAndSettle();
@@ -106,7 +116,7 @@ void main() {
 
       await tester.enterText(find.byType(TextField), 'jamie');
       await tester.pumpAndSettle();
-      await _tapVisible(tester, find.text('View MRI History'));
+      await _tapVisible(tester, find.text('Open Profile'));
 
       expect(find.text('MRI History'), findsOneWidget);
       expect(find.text('Jamie Example'), findsWidgets);
@@ -137,7 +147,6 @@ void main() {
 
       expect(find.text('AI Analysis Result'), findsOneWidget);
       expect(find.text(aiDecisionSupportNotice), findsOneWidget);
-      expect(find.text('MOCK DATA'), findsWidgets);
       _expectNoDoctorOnlyActions();
 
       await tester.tap(find.byTooltip('Close'));
@@ -194,7 +203,7 @@ void main() {
       _expectNoDoctorOnlyActions();
     });
 
-    testWidgets('Submit for Analysis shows not-connected feedback', (
+    testWidgets('Submit for Analysis with no file picked shows a prompt', (
       tester,
     ) async {
       await _pumpAt(tester, AppRoutes.radiologistMriUpload(_alexId));
@@ -206,20 +215,15 @@ void main() {
       expect(
         find.descendant(
           of: snackBar,
-          matching: find.textContaining('not connected yet'),
+          matching: find.text('Select an MRI scan file first.'),
         ),
         findsOneWidget,
       );
-      expect(find.textContaining('No file has been uploaded'), findsOneWidget);
     });
 
-    testWidgets('Select file shows not-connected feedback', (tester) async {
-      await _pumpAt(tester, AppRoutes.radiologistMriUpload(_alexId));
-
-      await _tapVisible(tester, find.text('Select MRI Scan File'));
-
-      expect(find.text('File selection is not connected yet.'), findsOneWidget);
-    });
+    // "Select MRI Scan File" now opens a real file picker (uploads to
+    // Cloudinary on submit), which isn't exercised here — same as the
+    // doctor's voice/drawing upload buttons in doctor_flow_test.dart.
 
     testWidgets('Cancel and breadcrumbs return to the MRI history', (
       tester,
@@ -250,11 +254,13 @@ void main() {
   });
 
   group('Radiologist navigation', () {
-    testWidgets('sidebar has only Dashboard and Patients', (tester) async {
+    testWidgets('sidebar has Dashboard, Patients and Settings', (
+      tester,
+    ) async {
       await _pumpAt(tester, AppRoutes.radiologistMriUpload(_alexId));
 
       final rail = tester.widget<NavigationRail>(find.byType(NavigationRail));
-      expect(rail.destinations, hasLength(2));
+      expect(rail.destinations, hasLength(3));
       // Nested pages keep Patients highlighted.
       expect(rail.selectedIndex, 1);
 

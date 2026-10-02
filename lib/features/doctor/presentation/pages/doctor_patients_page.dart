@@ -9,7 +9,6 @@ import '../../../../shared/models/clinical_test.dart';
 import '../../../../shared/models/patient.dart';
 import '../../../../shared/widgets/clinical/status_badge.dart';
 import '../../../../shared/widgets/future_content.dart';
-import '../../../../shared/widgets/mock_data_notice.dart';
 import '../../../../shared/widgets/page_container.dart';
 import '../../../../shared/widgets/page_header.dart';
 import '../../../../shared/widgets/responsive_table.dart';
@@ -51,7 +50,9 @@ class _DoctorPatientsPageState extends State<DoctorPatientsPage> {
     final query = _query.trim().toLowerCase();
     return query.isEmpty ||
         patient.fullName.toLowerCase().contains(query) ||
-        patient.id.toLowerCase().contains(query);
+        patient.id.toLowerCase().contains(query) ||
+        patient.nationalId.toLowerCase().contains(query) ||
+        patient.hospitalFileNo.toLowerCase().contains(query);
   }
 
   @override
@@ -76,7 +77,6 @@ class _DoctorPatientsPageState extends State<DoctorPatientsPage> {
               subtitle:
                   'Open a patient to view their profile and test history.',
             ),
-            const MockDataNotice(),
             SectionCard(
               title: 'Patient List',
               subtitle: '${rows.length} of ${patients.length} patients',
@@ -94,7 +94,7 @@ class _DoctorPatientsPageState extends State<DoctorPatientsPage> {
                         child: TextField(
                           decoration: const InputDecoration(
                             labelText: 'Search patients',
-                            hintText: 'Name or patient ID',
+                            hintText: 'Name, national ID or file no.',
                             prefixIcon: Icon(Icons.search),
                             isDense: true,
                           ),
@@ -152,6 +152,11 @@ class _PatientTable extends StatelessWidget {
 
   Widget _action(BuildContext context, _PatientRow row) => TextButton(
     onPressed: () => context.go(AppRoutes.doctorPatientProfile(row.patient.id)),
+    style: TextButton.styleFrom(
+      padding: EdgeInsets.zero,
+      minimumSize: Size.zero,
+      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    ),
     child: const Text('Open Profile'),
   );
 
@@ -166,13 +171,14 @@ class _PatientTable extends StatelessWidget {
       columns: [
         TableColumnDef(label: 'Patient', flex: 3, cellBuilder: _nameCell),
         TableColumnDef(
-          label: 'Age',
-          cellBuilder: (_, r) => Text('${r.patient.age}'),
+          label: 'National ID',
+          flex: 2,
+          cellBuilder: (_, r) => Text(r.patient.nationalId),
         ),
         TableColumnDef(
-          label: 'Gender',
+          label: 'Hospital file no.',
           flex: 2,
-          cellBuilder: (_, r) => Text(r.patient.gender.label),
+          cellBuilder: (_, r) => Text(r.patient.hospitalFileNo),
         ),
         TableColumnDef(
           label: 'Tests',
@@ -206,7 +212,7 @@ class _PatientTable extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  '${row.patient.age} · ${row.patient.gender.label} · '
+                  '${row.patient.nationalId} · ${row.patient.hospitalFileNo} · '
                   '${row.testCount} tests · Last: ${_lastTest(row)}',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),

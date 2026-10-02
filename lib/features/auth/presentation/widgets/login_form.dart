@@ -2,48 +2,48 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_spacing.dart';
 
-/// Email/password sign-in form.
+/// Employee ID/password sign-in form.
 ///
 /// Only validates input; [onSubmit] decides what happens with valid
 /// credentials, so real authentication can be plugged in later.
 class LoginForm extends StatefulWidget {
   const LoginForm({super.key, required this.onSubmit});
 
-  final void Function(String email, String password) onSubmit;
+  final void Function(String employeeId, String password) onSubmit;
 
   @override
   State<LoginForm> createState() => _LoginFormState();
 }
 
 class _LoginFormState extends State<LoginForm> {
-  static final _emailPattern = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
-
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
+  final _employeeIdController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   AutovalidateMode _autovalidateMode = AutovalidateMode.disabled;
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _employeeIdController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
   void _submit() {
     if (_formKey.currentState!.validate()) {
-      widget.onSubmit(_emailController.text.trim(), _passwordController.text);
+      widget.onSubmit(
+        _employeeIdController.text.trim(),
+        _passwordController.text,
+      );
     } else {
       // Re-validate as the user corrects fields after a failed attempt.
       setState(() => _autovalidateMode = AutovalidateMode.onUserInteraction);
     }
   }
 
-  String? _validateEmail(String? value) {
-    final email = value?.trim() ?? '';
-    if (email.isEmpty) return 'Enter your email address.';
-    if (!_emailPattern.hasMatch(email)) return 'Enter a valid email address.';
+  String? _validateEmployeeId(String? value) {
+    final id = value?.trim() ?? '';
+    if (id.isEmpty) return 'Enter your employee ID.';
     return null;
   }
 
@@ -62,13 +62,12 @@ class _LoginFormState extends State<LoginForm> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             TextFormField(
-              controller: _emailController,
-              decoration: const InputDecoration(labelText: 'Email'),
-              keyboardType: TextInputType.emailAddress,
+              controller: _employeeIdController,
+              decoration: const InputDecoration(labelText: 'Employee ID'),
               textInputAction: TextInputAction.next,
-              autofillHints: const [AutofillHints.email],
+              autofillHints: const [AutofillHints.username],
               autocorrect: false,
-              validator: _validateEmail,
+              validator: _validateEmployeeId,
             ),
             const SizedBox(height: AppSpacing.md),
             TextFormField(

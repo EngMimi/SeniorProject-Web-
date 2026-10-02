@@ -1,28 +1,23 @@
-enum Gender {
-  female('Female'),
-  male('Male');
-
-  const Gender(this.label);
-
-  final String label;
-}
-
 /// Minimal patient profile used by the UI.
 ///
-/// Fields are UI-driven placeholders and must be aligned with the real
-/// backend structure once it is confirmed.
+/// Fields match what the Patient Mobile Application actually collects at
+/// sign-up (see neuroinsight_pd_app's SignUpStep1Screen / DbHelper) — there
+/// is no gender field collected there, so this model doesn't invent one.
 class Patient {
   const Patient({
     required this.id,
     required this.fullName,
-    required this.age,
-    required this.gender,
-    required this.registeredOn,
+    required this.nationalId,
+    required this.dateOfBirth,
+    required this.hospitalFileNo,
   });
 
   final String id;
   final String fullName;
-  final int age;
-  final Gender gender;
-  final DateTime registeredOn;
+  final String nationalId;
+
+  /// As entered at sign-up, e.g. "12 / 05 / 1990". Not a parsed [DateTime]
+  /// since the mobile app stores it as free text.
+  final String dateOfBirth;
+  final String hospitalFileNo;
 }
