@@ -33,6 +33,10 @@ class AiAnalysisResultCard extends StatelessWidget {
         spacing: AppSpacing.lg,
         children: [
           const ClinicalNotice(),
+          // Shows the actual uploaded image (spiral drawing photo or MRI
+          // scan) when one was saved, so the doctor can look at it
+          // directly rather than only seeing the AI's prediction text.
+          if (test.fileUrl != null) _UploadedImagePreview(url: test.fileUrl!),
           if (test.status.hasResult) ...[
             InfoGrid(
               minFieldWidth: 160,
@@ -208,6 +212,49 @@ class _ModelOutputPlaceholder extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Shows the uploaded spiral-drawing photo or MRI scan image itself, above
+/// the AI result, so the doctor can view it directly. Shows a simple
+/// loading spinner while it loads and a short message if it fails to load
+/// (e.g. the link expired or the network is unavailable) instead of a
+/// broken-image icon.
+class _UploadedImagePreview extends StatelessWidget {
+  const _UploadedImagePreview({required this.url});
+
+  final String url;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: AppRadius.mdAll,
+      child: Container(
+        constraints: const BoxConstraints(maxHeight: 360),
+        width: double.infinity,
+        color: AppColors.surface,
+        child: Image.network(
+          url,
+          fit: BoxFit.contain,
+          loadingBuilder: (context, child, progress) {
+            if (progress == null) return child;
+            return const Padding(
+              padding: EdgeInsets.all(AppSpacing.xl),
+              child: Center(child: CircularProgressIndicator()),
+            );
+          },
+          errorBuilder: (context, error, stackTrace) => Padding(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: Text(
+              'The uploaded image could not be loaded.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
         ),
       ),
     );

@@ -43,6 +43,7 @@ class ClinicalTest {
     this.aiPrediction,
     this.aiPredictionCode,
     this.aiProbabilityPd,
+    this.fileUrl,
   });
 
   final String id;
@@ -57,6 +58,11 @@ class ClinicalTest {
   final String? aiPrediction;
   final int? aiPredictionCode;
   final double? aiProbabilityPd;
+
+  /// Public URL of the uploaded image (spiral drawing photo or MRI scan),
+  /// e.g. on Cloudinary — null for a voice test, or an older record saved
+  /// before this was tracked.
+  final String? fileUrl;
 
   bool get hasAiResult => aiPrediction != null;
 }

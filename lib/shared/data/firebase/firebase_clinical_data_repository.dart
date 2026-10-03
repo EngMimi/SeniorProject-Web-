@@ -78,6 +78,7 @@ class FirebaseClinicalDataRepository implements ClinicalDataRepository {
       aiPrediction: prediction?['prediction'] as String?,
       aiPredictionCode: prediction?['predictionCode'] as int?,
       aiProbabilityPd: (prediction?['probabilityPd'] as num?)?.toDouble(),
+      fileUrl: data['fileUrl'] as String?,
     );
   }
 
@@ -238,12 +239,61 @@ class FirebaseClinicalDataRepository implements ClinicalDataRepository {
           .collection('tests')
           .doc(testId)
           .get();
-      if (doc.exists) {
-        final report = _reportFromDoc(patient.id, doc);
-        if (report != null) return report;
+      if (!doc.exists) continue;
+
+      // This test belongs to this patient — it's the only place we need
+      // to look further, so every path below returns (or falls through to
+      // the final `return null`) rather than continuing the patient loop.
+      final embedded = _reportFromDoc(patient.id, doc);
+      if (embedded != null) return embedded;
+
+      // No report embedded directly on the test doc. The test may still
+      // be covered by a combined (multi-test) report saved only in the
+      // patient's `reports` subcollection — submitCombinedReport() marks
+      // the test's status as 'reviewed' but never writes back onto the
+      // test doc itself, so that's the other place a report can live.
+      // Filtered by `testIds` only (not also `status`) so this doesn't
+      // need a composite Firestore index — the `submitted` check is done
+      // in Dart just below instead.
+      final reportsSnapshot = await _db
+          .collection('users')
+          .doc(patient.id)
+          .collection('reports')
+          .where('testIds', arrayContains: testId)
+          .get();
+      for (final reportDoc in reportsSnapshot.docs) {
+        if (reportDoc.data()['status'] == 'submitted') {
+          return _reportFromReportsDoc(patient.id, testId, reportDoc);
+        }
       }
+
+      return null;
     }
     return null;
+  }
+
+  /// Builds a [DiagnosticReport] from a doc in the `reports` subcollection
+  /// (a combined report covering one or more tests), for a specific
+  /// [testId] it covers.
+  DiagnosticReport _reportFromReportsDoc(
+    String patientId,
+    String testId,
+    DocumentSnapshot<Map<String, dynamic>> doc,
+  ) {
+    final data = doc.data() ?? const {};
+    final writtenAt = data['writtenAt'];
+    return DiagnosticReport(
+      id: doc.id,
+      patientId: patientId,
+      testId: testId,
+      title: data['title'] as String? ?? 'Report',
+      clinicalNotes: data['clinicalNotes'] as String? ?? '',
+      recommendations: data['recommendations'] as String? ?? '',
+      status: data['status'] == 'submitted'
+          ? ReportStatus.submitted
+          : ReportStatus.draft,
+      updatedOn: writtenAt is Timestamp ? writtenAt.toDate() : DateTime.now(),
+    );
   }
 
   /// Saves the doctor's report onto the test doc, and also mirrors it
