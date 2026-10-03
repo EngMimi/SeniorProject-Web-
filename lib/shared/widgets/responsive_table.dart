@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 
+/// Describes one column of a [ResponsiveTable]: its label and how to build
+/// a cell for a row.
 class TableColumnDef<T> {
   const TableColumnDef({
     required this.label,
@@ -102,6 +104,7 @@ class ResponsiveTable<T> extends StatelessWidget {
   }
 }
 
+/// One row of the wide (non-stacked) table layout.
 class _TableRow<T> extends StatelessWidget {
   const _TableRow({
     required this.columns,

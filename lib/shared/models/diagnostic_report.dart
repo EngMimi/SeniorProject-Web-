@@ -1,3 +1,4 @@
+/// Whether a report is still a draft or has been submitted.
 enum ReportStatus {
   draft('Draft'),
   submitted('Submitted');

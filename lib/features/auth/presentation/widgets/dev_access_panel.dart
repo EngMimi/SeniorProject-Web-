@@ -6,9 +6,9 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_spacing.dart';
 
-/// TEMPORARY development shortcuts into each role's pages, bypassing sign-in.
-///
-/// Deliberately styled to look unlike the production login.
+/// Temporary dev-only buttons that jump straight into a role's dashboard,
+/// skipping sign-in. Styled to look obviously different from the real
+/// login so it's not mistaken for production UI.
 // TODO: Remove once real authentication and role-based routing exist.
 class DevAccessPanel extends StatelessWidget {
   const DevAccessPanel({super.key});
@@ -76,6 +76,7 @@ class DevAccessPanel extends StatelessWidget {
   }
 }
 
+/// One "Continue as ..." shortcut button.
 class _DevButton extends StatelessWidget {
   const _DevButton({required this.label, required this.route});
 

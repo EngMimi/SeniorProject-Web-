@@ -9,6 +9,7 @@ class RadiologistShell extends StatelessWidget {
 
   final Widget child;
 
+  // The nav items shown in the radiologist's sidebar/bottom nav.
   static const _destinations = [
     ShellDestination(
       label: 'Dashboard',

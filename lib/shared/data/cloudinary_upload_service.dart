@@ -3,13 +3,11 @@ import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
-/// Uploads a file to Cloudinary's free tier using an unsigned upload
-/// preset — no API secret is ever used client-side, which is what makes
-/// this safe to call directly from the browser.
-///
-/// Used by both the doctor's spiral-drawing upload and the radiologist's
-/// MRI scan upload: neither model exists yet, so this just gets the image
-/// file somewhere reachable (a `fileUrl`) for the test record.
+// Uploads image files (spiral drawings, MRI scans) to Cloudinary's free
+// tier so we have a URL to store and show later.
+
+/// Uploads a file to Cloudinary using an unsigned upload preset, so no
+/// secret key is needed in the browser code.
 class CloudinaryUploadService {
   CloudinaryUploadService._();
 
@@ -20,9 +18,8 @@ class CloudinaryUploadService {
   static const String _cloudName = 'fx91bxgx';
   static const String _uploadPreset = 'storge';
 
-  /// Uploads [bytes] (named [filename], for Cloudinary's own record) and
-  /// returns its public HTTPS URL. Throws an [Exception] with a short
-  /// user-facing message on failure.
+  /// Uploads [bytes] and returns the public URL Cloudinary gives back.
+  /// Throws an [Exception] with a short message if it fails.
   Future<String> uploadImage({
     required Uint8List bytes,
     required String filename,

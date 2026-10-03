@@ -17,7 +17,8 @@ import '../../../../shared/widgets/summary_card.dart';
 
 typedef _DashboardData = (List<Patient> patients, List<ClinicalTest> scans);
 
-/// MRI-focused overview for radiologists. Only MRI tests are loaded.
+// The radiologist's home page: a summary of MRI scans and their status.
+// Only MRI tests are loaded here (other modalities are out of scope).
 class RadiologistDashboardPage extends StatelessWidget {
   const RadiologistDashboardPage({super.key, required this.repository});
 
@@ -25,6 +26,7 @@ class RadiologistDashboardPage extends StatelessWidget {
 
   final ClinicalDataRepository repository;
 
+  // Loads all patients and all MRI scans together for this page.
   Future<_DashboardData> _load() => (
     repository.getPatients(),
     repository.getTests(modality: TestModality.mri),
@@ -109,6 +111,7 @@ class RadiologistDashboardPage extends StatelessWidget {
   }
 }
 
+// Table of the most recent MRI scans, with a link to each patient's history.
 class _RecentMriTable extends StatelessWidget {
   const _RecentMriTable({required this.scans, required this.patientsById});
 

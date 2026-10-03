@@ -3,10 +3,13 @@ import 'package:flutter/material.dart';
 import 'app_colors.dart';
 import 'app_radius.dart';
 
-/// Application theme. Light only for now; the palette is designed for light
-/// clinical surfaces.
+// Builds the app's visual theme (colors, borders, button styles, etc).
+// Only a light theme exists for now, matching the clinical color palette.
 abstract final class AppTheme {
+  // Builds the full Material theme used by MaterialApp.
   static ThemeData get light {
+    // Start from Material's generated color scheme, then override
+    // specific colors with our own brand palette.
     final colorScheme = ColorScheme.fromSeed(seedColor: AppColors.navy)
         .copyWith(
           primary: AppColors.navy,
@@ -24,6 +27,8 @@ abstract final class AppTheme {
           onError: AppColors.onNavy,
         );
 
+    // Shorthand for building a text-field border in a given color/width,
+    // used for all the input border states below (normal, focused, error).
     OutlineInputBorder inputBorder(Color color, [double width = 1]) =>
         OutlineInputBorder(
           borderRadius: AppRadius.smAll,

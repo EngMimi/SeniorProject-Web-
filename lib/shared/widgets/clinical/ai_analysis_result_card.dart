@@ -12,9 +12,9 @@ import 'status_badge.dart';
 
 /// Presents the AI analysis result of a test, for any modality.
 ///
-/// Voice tests show the real model output (the Voice model is live). The
-/// Spiral Drawing and MRI model output schemas are not confirmed yet, so
-/// those still show an explicit placeholder.
+/// All three models (Voice, Spiral Drawing, MRI) are live, so a test with a
+/// result shows the real model output. The placeholder below only shows for
+/// an older test record that predates whichever model analyzed it.
 class AiAnalysisResultCard extends StatelessWidget {
   const AiAnalysisResultCard({super.key, required this.test});
 
@@ -51,8 +51,8 @@ class AiAnalysisResultCard extends StatelessWidget {
                 ),
               ],
             ),
-            if (test.hasVoiceResult)
-              _VoiceModelOutput(test: test)
+            if (test.hasAiResult)
+              _AiModelOutput(test: test)
             else
               _ModelOutputPlaceholder(modality: test.modality),
           ] else
@@ -63,6 +63,7 @@ class AiAnalysisResultCard extends StatelessWidget {
   }
 }
 
+/// Shown instead of a result when the AI hasn't finished analyzing yet.
 class _NoResultYet extends StatelessWidget {
   const _NoResultYet({required this.status});
 
@@ -94,10 +95,10 @@ class _NoResultYet extends StatelessWidget {
   }
 }
 
-/// Real output of the live Voice model: the predicted class and the
-/// predicted probability of Parkinson's disease.
-class _VoiceModelOutput extends StatelessWidget {
-  const _VoiceModelOutput({required this.test});
+/// Real output of a live model (Voice or Spiral Drawing today): the
+/// predicted class and the predicted probability of Parkinson's disease.
+class _AiModelOutput extends StatelessWidget {
+  const _AiModelOutput({required this.test});
 
   final ClinicalTest test;
 
@@ -106,6 +107,11 @@ class _VoiceModelOutput extends StatelessWidget {
     final theme = Theme.of(context);
     final isPd = test.aiPredictionCode == 1;
     final probability = test.aiProbabilityPd;
+    final sampleNoun = switch (test.modality) {
+      TestModality.voice => 'voice sample',
+      TestModality.spiral => 'spiral drawing',
+      TestModality.mri => 'scan',
+    };
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -120,7 +126,7 @@ class _VoiceModelOutput extends StatelessWidget {
           spacing: AppSpacing.md,
           children: [
             Text(
-              'Voice model output',
+              '${test.modality.label} model output',
               style: theme.textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
@@ -143,9 +149,9 @@ class _VoiceModelOutput extends StatelessWidget {
             Text(
               isPd
                   ? 'The model flagged indicators consistent with Parkinson’s '
-                        'disease in this voice sample.'
+                        'disease in this $sampleNoun.'
                   : 'The model did not flag indicators consistent with '
-                        'Parkinson’s disease in this voice sample.',
+                        'Parkinson’s disease in this $sampleNoun.',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -157,6 +163,8 @@ class _VoiceModelOutput extends StatelessWidget {
   }
 }
 
+/// Placeholder shown for an older test whose modality's model wasn't live
+/// yet when it was analyzed, so there's no real output to show.
 class _ModelOutputPlaceholder extends StatelessWidget {
   const _ModelOutputPlaceholder({required this.modality});
 

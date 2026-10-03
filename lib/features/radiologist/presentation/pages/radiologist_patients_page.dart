@@ -27,6 +27,7 @@ class _PatientRow {
   final ClinicalTest? latestScan;
 }
 
+// Searchable list of patients, with each one's MRI scan count and latest scan.
 class RadiologistPatientsPage extends StatefulWidget {
   const RadiologistPatientsPage({super.key, required this.repository});
 
@@ -40,11 +41,14 @@ class RadiologistPatientsPage extends StatefulWidget {
 class _RadiologistPatientsPageState extends State<RadiologistPatientsPage> {
   String _query = '';
 
+  // Loads all patients and all MRI scans, so each patient's scan count and
+  // latest scan can be worked out on this page.
   Future<_PatientsData> _load() => (
     widget.repository.getPatients(),
     widget.repository.getTests(modality: TestModality.mri),
   ).wait;
 
+  // Checks if a patient's name or ID matches the search box text.
   bool _matches(Patient patient) {
     final query = _query.trim().toLowerCase();
     return query.isEmpty ||
@@ -113,6 +117,7 @@ class _RadiologistPatientsPageState extends State<RadiologistPatientsPage> {
   }
 }
 
+// Renders the patient rows as a table (or stacked cards on narrow screens).
 class _PatientTable extends StatelessWidget {
   const _PatientTable({required this.rows});
 

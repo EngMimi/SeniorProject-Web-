@@ -27,7 +27,8 @@ typedef _AnalysisData = (
   DiagnosticReport? report,
 );
 
-/// AI analysis result and diagnostic report for one test.
+/// Page showing one test's AI analysis result plus the doctor's
+/// diagnostic report for it.
 class DoctorTestAnalysisPage extends StatefulWidget {
   const DoctorTestAnalysisPage({
     super.key,
@@ -53,12 +54,14 @@ class _DoctorTestAnalysisPageState extends State<DoctorTestAnalysisPage> {
   /// fresh key instead of showing the data from before the save.
   int _reloadToken = 0;
 
+  // Loads the patient, the test, and any existing report for it together.
   Future<_AnalysisData> _load() => (
     widget.repository.getPatient(widget.patientId),
     widget.repository.getTest(widget.testId),
     widget.repository.getReportForTest(widget.testId),
   ).wait;
 
+  // Saves the doctor's report (draft or submitted) then reloads the page.
   Future<void> _saveReport({
     required String title,
     required String clinicalNotes,
@@ -150,6 +153,7 @@ class _DoctorTestAnalysisPageState extends State<DoctorTestAnalysisPage> {
   }
 }
 
+/// Shows basic patient and test info above the AI result.
 class _TestContextCard extends StatelessWidget {
   const _TestContextCard({required this.patient, required this.test});
 
@@ -181,6 +185,7 @@ class _TestContextCard extends StatelessWidget {
   }
 }
 
+/// Shown when the test ID in the URL doesn't exist for this patient.
 class _TestNotFound extends StatelessWidget {
   const _TestNotFound({required this.patientId});
 

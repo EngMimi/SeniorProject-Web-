@@ -17,6 +17,7 @@ class FutureContent<T> extends StatefulWidget {
   State<FutureContent<T>> createState() => _FutureContentState<T>();
 }
 
+// Runs the future once, then shows a spinner, an error, or the built content.
 class _FutureContentState<T> extends State<FutureContent<T>> {
   late final Future<T> _future = widget.load();
 

@@ -2,10 +2,10 @@ import '../../models/clinical_test.dart';
 import '../../models/diagnostic_report.dart';
 import '../../models/patient.dart';
 
-/// FICTIONAL demonstration data for UI development only.
-///
-/// All names and identifiers are invented and do not refer to real people.
-/// Do not add real patient information here.
+// Fictional demo patients, tests and reports used for UI development.
+// Nothing here refers to real people.
+
+/// Fictional demonstration data for UI development only.
 abstract final class MockClinicalData {
   static final List<Patient> patients = [
     Patient(
@@ -60,9 +60,9 @@ abstract final class MockClinicalData {
       DateTime(2026, 9, 24),
       AnalysisStatus.readyForReview,
       DateTime(2026, 9, 24),
-      aiPrediction: 'PD',
-      aiPredictionCode: 1,
-      aiProbabilityPd: 0.8671,
+      'PD',
+      1,
+      0.8671,
     ),
     _test(
       '0002',
@@ -86,9 +86,9 @@ abstract final class MockClinicalData {
       DateTime(2026, 8, 20),
       AnalysisStatus.reviewed,
       DateTime(2026, 8, 20),
-      aiPrediction: 'Healthy',
-      aiPredictionCode: 0,
-      aiProbabilityPd: 0.12,
+      'Healthy',
+      0,
+      0.12,
     ),
     _test(
       '0005',
@@ -120,9 +120,9 @@ abstract final class MockClinicalData {
       DateTime(2026, 9, 21),
       AnalysisStatus.reviewed,
       DateTime(2026, 9, 21),
-      aiPrediction: 'PD',
-      aiPredictionCode: 1,
-      aiProbabilityPd: 0.7312,
+      'PD',
+      1,
+      0.7312,
     ),
     _test(
       '0009',
@@ -146,9 +146,9 @@ abstract final class MockClinicalData {
       DateTime(2026, 9, 18),
       AnalysisStatus.readyForReview,
       DateTime(2026, 9, 18),
-      aiPrediction: 'Healthy',
-      aiPredictionCode: 0,
-      aiProbabilityPd: 0.08,
+      'Healthy',
+      0,
+      0.08,
     ),
     _test(
       '0012',
@@ -164,9 +164,9 @@ abstract final class MockClinicalData {
       DateTime(2026, 8, 28),
       AnalysisStatus.reviewed,
       DateTime(2026, 8, 28),
-      aiPrediction: 'PD',
-      aiPredictionCode: 1,
-      aiProbabilityPd: 0.9104,
+      'PD',
+      1,
+      0.9104,
     ),
     _test(
       '0014',
@@ -224,6 +224,7 @@ abstract final class MockClinicalData {
     ),
   ];
 
+  /// Shorthand for building one fake [ClinicalTest].
   static ClinicalTest _test(
     String number,
     String patientId,
@@ -246,6 +247,7 @@ abstract final class MockClinicalData {
     aiProbabilityPd: aiProbabilityPd,
   );
 
+  /// Shorthand for building one fake [DiagnosticReport].
   static DiagnosticReport _report(
     String number,
     String patientId,

@@ -13,6 +13,17 @@ void main() {
     addTearDown(tester.view.reset);
   }
 
+  // Builds a NeuroInsightApp backed by the fake repository instead of real
+  // Firebase, so tests never need Firebase.initializeApp().
+  Widget testApp(WidgetTester tester, {String? initialLocation}) {
+    final router = createAppRouter(
+      initialLocation: initialLocation ?? AppRoutes.login,
+      repository: const MockClinicalDataRepository(),
+    );
+    addTearDown(router.dispose);
+    return NeuroInsightApp(router: router);
+  }
+
   setUp(() {
     // Every test runs against a fake AuthService so none of them touch
     // real Firebase. Signed out by default; tests that need to land past
@@ -22,7 +33,7 @@ void main() {
 
   group('Login page', () {
     testWidgets('App starts on the login page', (tester) async {
-      await tester.pumpWidget(const NeuroInsightApp());
+      await tester.pumpWidget(testApp(tester));
       await tester.pumpAndSettle();
 
       expect(find.text('NeuroInsight-PD'), findsOneWidget);
@@ -35,7 +46,7 @@ void main() {
       tester,
     ) async {
       setWindowSize(tester, const Size(1440, 900));
-      await tester.pumpWidget(const NeuroInsightApp());
+      await tester.pumpWidget(testApp(tester));
       await tester.pumpAndSettle();
 
       expect(find.text('NeuroInsight-PD'), findsOneWidget);
@@ -48,7 +59,7 @@ void main() {
       tester,
     ) async {
       setWindowSize(tester, const Size(390, 844));
-      await tester.pumpWidget(const NeuroInsightApp());
+      await tester.pumpWidget(testApp(tester));
       await tester.pumpAndSettle();
 
       expect(find.text('NeuroInsight-PD'), findsOneWidget);
@@ -59,7 +70,7 @@ void main() {
     testWidgets('Submitting empty form shows validation errors', (
       tester,
     ) async {
-      await tester.pumpWidget(const NeuroInsightApp());
+      await tester.pumpWidget(testApp(tester));
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Sign In'));
@@ -72,7 +83,7 @@ void main() {
     testWidgets(
       'Valid input against the fake AuthService reports a graceful error',
       (tester) async {
-        await tester.pumpWidget(const NeuroInsightApp());
+        await tester.pumpWidget(testApp(tester));
         await tester.pumpAndSettle();
 
         await tester.enterText(
@@ -95,7 +106,7 @@ void main() {
     );
 
     testWidgets('Password visibility can be toggled', (tester) async {
-      await tester.pumpWidget(const NeuroInsightApp());
+      await tester.pumpWidget(testApp(tester));
       await tester.pumpAndSettle();
 
       EditableText passwordField() => tester.widget<EditableText>(

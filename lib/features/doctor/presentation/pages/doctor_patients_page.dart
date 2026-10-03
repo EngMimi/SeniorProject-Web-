@@ -16,7 +16,8 @@ import '../../../../shared/widgets/section_card.dart';
 
 typedef _PatientsData = (List<Patient> patients, List<ClinicalTest> tests);
 
-/// Row view model combining a patient with a summary of their tests.
+// One row in the patient table: a patient plus a quick summary of their
+// tests (how many, when the last one was, how many need review).
 class _PatientRow {
   _PatientRow(this.patient, List<ClinicalTest> tests)
     : testCount = tests.length,
@@ -31,6 +32,7 @@ class _PatientRow {
   final int awaitingReview;
 }
 
+/// The list of all the doctor's patients, with a search box to filter it.
 class DoctorPatientsPage extends StatefulWidget {
   const DoctorPatientsPage({super.key, required this.repository});
 
@@ -46,6 +48,8 @@ class _DoctorPatientsPageState extends State<DoctorPatientsPage> {
   Future<_PatientsData> _load() =>
       (widget.repository.getPatients(), widget.repository.getTests()).wait;
 
+  // True if the patient matches the current search text (by name, ID,
+  // national ID or hospital file number).
   bool _matches(Patient patient) {
     final query = _query.trim().toLowerCase();
     return query.isEmpty ||
@@ -115,11 +119,13 @@ class _DoctorPatientsPageState extends State<DoctorPatientsPage> {
   }
 }
 
+/// Table showing each patient's info with a button to open their profile.
 class _PatientTable extends StatelessWidget {
   const _PatientTable({required this.rows});
 
   final List<_PatientRow> rows;
 
+  // Shows the patient's name and ID for one row.
   Widget _nameCell(BuildContext context, _PatientRow row) {
     final theme = Theme.of(context);
     return Column(

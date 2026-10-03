@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_spacing.dart';
 
+/// One entry in a breadcrumb trail (a label and the route it links to).
 class BreadcrumbItem {
   const BreadcrumbItem(this.label, {this.location});
 

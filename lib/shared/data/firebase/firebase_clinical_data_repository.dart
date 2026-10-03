@@ -8,20 +8,19 @@ import '../../models/diagnostic_report.dart';
 import '../../models/patient.dart';
 import '../clinical_data_repository.dart';
 
-/// Real [ClinicalDataRepository] backed by the same Firebase project as the
-/// Patient Mobile Application (`neuroinsight-784ee`).
+// The real implementation of ClinicalDataRepository: reads and writes
+// patients, tests and reports in the shared Firestore database.
+
+/// Reads and writes patient/test/report data from the same Firebase
+/// project as the Patient Mobile Application (`neuroinsight-784ee`).
 ///
-/// Schema (matches what neuroinsight_pd_app's DbHelper already writes):
-/// - `users/{uid}`: patient profile. Docs with `role` == 'doctor' or
-///   'radiologist' are clinical-staff accounts, not patients. A patient doc
-///   may carry `assignedDoctorIds` and/or `assignedRadiologistIds` (each an
-///   array of staff UIDs) — a doctor only sees patients whose
-///   `assignedDoctorIds` contains their own uid, and a radiologist only
-///   sees patients whose `assignedRadiologistIds` contains theirs.
-/// - `users/{uid}/tests/{testId}`: one test. Fields: title, date, type
-///   ('voice' | 'drawing'), createdAt, status ('uploaded' | 'pending_review'
-///   | 'reviewed'), optional `prediction` map (voice only, from the live
-///   model) and optional `report` map (written from here).
+/// Firestore layout:
+/// - `users/{uid}`: a patient profile, unless `role` is 'doctor' or
+///   'radiologist' (then it's a staff account, not a patient). A patient
+///   doc can list `assignedDoctorIds` / `assignedRadiologistIds` — staff
+///   only see patients assigned to them.
+/// - `users/{uid}/tests/{testId}`: one test, with its type, status,
+///   optional AI `prediction`, and optional `report` (written here).
 class FirebaseClinicalDataRepository implements ClinicalDataRepository {
   FirebaseClinicalDataRepository({FirebaseFirestore? firestore})
       : _db = firestore ?? FirebaseFirestore.instance;
@@ -30,6 +29,7 @@ class FirebaseClinicalDataRepository implements ClinicalDataRepository {
 
   static const _staffRoles = {'doctor', 'radiologist'};
 
+  /// Converts a Firestore `users` doc into a [Patient].
   Patient _patientFromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data() ?? const {};
     return Patient(
@@ -41,6 +41,7 @@ class FirebaseClinicalDataRepository implements ClinicalDataRepository {
     );
   }
 
+  /// Maps Firestore's `type` string to our [TestModality] enum.
   TestModality _modalityFromType(String? type) => switch (type) {
         'voice' => TestModality.voice,
         'drawing' => TestModality.spiral,
@@ -48,6 +49,7 @@ class FirebaseClinicalDataRepository implements ClinicalDataRepository {
         _ => TestModality.spiral,
       };
 
+  /// Maps Firestore's `status` string to our [AnalysisStatus] enum.
   AnalysisStatus _statusFromString(String? status) => switch (status) {
         'pending_review' => AnalysisStatus.readyForReview,
         'reviewed' => AnalysisStatus.reviewed,
@@ -55,6 +57,7 @@ class FirebaseClinicalDataRepository implements ClinicalDataRepository {
         _ => AnalysisStatus.pending,
       };
 
+  /// Converts a Firestore `tests` doc into a [ClinicalTest].
   ClinicalTest _testFromDoc(
     String patientId,
     DocumentSnapshot<Map<String, dynamic>> doc,
@@ -78,6 +81,8 @@ class FirebaseClinicalDataRepository implements ClinicalDataRepository {
     );
   }
 
+  /// Builds a [DiagnosticReport] from a test doc's `report` field, if it
+  /// has one.
   DiagnosticReport? _reportFromDoc(
     String patientId,
     DocumentSnapshot<Map<String, dynamic>> doc,
@@ -101,20 +106,21 @@ class FirebaseClinicalDataRepository implements ClinicalDataRepository {
     );
   }
 
-  /// A signed-in doctor or radiologist only ever sees their own assigned
-  /// patients. Doctors and radiologists are assigned separately (a patient
-  /// can have different people in each role), via `assignedDoctorIds` and
-  /// `assignedRadiologistIds` respectively.
+  /// True if the signed-in user is a doctor or radiologist, who should
+  /// only see their own assigned patients (not every patient).
   bool get _restrictToAssignedPatients =>
       AuthService.instance.role == StaffRole.doctor ||
       AuthService.instance.role == StaffRole.radiologist;
 
+  /// Which Firestore field lists patients assigned to the current role.
   String? get _assignmentFieldForCurrentRole => switch (AuthService.instance.role) {
         StaffRole.doctor => 'assignedDoctorIds',
         StaffRole.radiologist => 'assignedRadiologistIds',
         null => null,
       };
 
+  /// True if this patient is assigned to the currently signed-in staff
+  /// member.
   bool _isAssignedToCurrentUser(Map<String, dynamic> data) {
     final userId = AuthService.instance.uid;
     final field = _assignmentFieldForCurrentRole;
@@ -142,9 +148,8 @@ class FirebaseClinicalDataRepository implements ClinicalDataRepository {
     final data = doc.data() ?? const {};
     if (_staffRoles.contains(data['role'] as String?)) return null;
     if (_restrictToAssignedPatients && !_isAssignedToCurrentUser(data)) {
-      // Not this doctor's/radiologist's patient — treat the same as
-      // "doesn't exist" so a
-      // guessed or stale URL can't be used to view someone else's patient.
+      // Not this staff member's patient — treat it as "doesn't exist" so
+      // a guessed URL can't be used to view someone else's patient.
       return null;
     }
     return _patientFromDoc(doc);
@@ -166,9 +171,8 @@ class FirebaseClinicalDataRepository implements ClinicalDataRepository {
           .get();
       tests.addAll(snapshot.docs.map((d) => _testFromDoc(patientId, d)));
     } else {
-      // No single patient given (dashboard / patients list): scan every
-      // patient's tests. Fine at this project's scale; a collectionGroup
-      // query would need a composite index for the equivalent ordering.
+      // No single patient given: scan every patient's tests instead.
+      // Fine at this project's small scale.
       final patients = await getPatients();
       for (final patient in patients) {
         final snapshot = await _db
@@ -187,11 +191,9 @@ class FirebaseClinicalDataRepository implements ClinicalDataRepository {
         : [for (final t in tests) if (t.modality == modality) t];
   }
 
-  /// Finds a test by id without knowing its owning patient up front (the
-  /// [ClinicalDataRepository] interface doesn't carry one). Routes in this
-  /// app always have the patientId alongside the testId in the URL, so
-  /// prefer [getTests] with a patientId when it's available; this is the
-  /// fallback the interface requires.
+  /// Finds a test by id by checking every patient, since the interface
+  /// doesn't pass in which patient owns it. Prefer [getTests] with a
+  /// patientId when you have one; this is just the fallback.
   @override
   Future<ClinicalTest?> getTest(String testId) async {
     final patients = await getPatients();
@@ -244,6 +246,8 @@ class FirebaseClinicalDataRepository implements ClinicalDataRepository {
     return null;
   }
 
+  /// Saves the doctor's report onto the test doc, and also mirrors it
+  /// into the `reports` collection so the patient app's Reports tab sees it.
   @override
   Future<void> submitReport({
     required String patientId,
@@ -273,13 +277,8 @@ class FirebaseClinicalDataRepository implements ClinicalDataRepository {
       if (submit) 'reportViewed': false,
     });
 
-    // Also write to the same `reports` collection the combined-report flow
-    // uses — that's what the patient mobile app's Reports tab actually
-    // reads, so a single-test report written from this (older) form shows
-    // up there too, not just in the web app's own per-test view. A
-    // deterministic id keyed to the test means saving this form again
-    // (draft -> submit, or re-editing) updates the same report doc instead
-    // of creating a new one each time.
+    // Mirror into `reports` too, using an id keyed to the test so saving
+    // this form again updates the same doc instead of duplicating it.
     await submitCombinedReport(
       reportId: 'legacy_$testId',
       patientId: patientId,
@@ -292,11 +291,11 @@ class FirebaseClinicalDataRepository implements ClinicalDataRepository {
     );
   }
 
-  /// Matches the plain-text date label neuroinsight_pd_app's DbHelper
-  /// writes (`DateFormat('MMM d, yyyy')`), since the mobile Reports/Tests
-  /// screens read this field directly as a string.
+  /// Today's date as plain text, in the same format the mobile app uses,
+  /// since the Reports/Tests screens display this field as a string.
   String _todayLabel() => DateFormat('MMM d, yyyy').format(DateTime.now());
 
+  /// Saves a new voice test with its AI prediction already attached.
   @override
   Future<void> addVoiceTest({
     required String patientId,
@@ -319,42 +318,59 @@ class FirebaseClinicalDataRepository implements ClinicalDataRepository {
     });
   }
 
+  /// Saves a new spiral-drawing test with its AI prediction and uploaded
+  /// image URL.
   @override
   Future<void> addDrawingTest({
     required String patientId,
     required String title,
     required String fileUrl,
+    required String prediction,
+    required int predictionCode,
+    required double probabilityPd,
   }) async {
     await _db.collection('users').doc(patientId).collection('tests').add({
       'title': title,
       'date': _todayLabel(),
       'type': 'drawing',
       'createdAt': FieldValue.serverTimestamp(),
-      // No drawing model yet, so there's no prediction — this just records
-      // the upload until Ruba's model is ready to analyze it.
-      'status': 'uploaded',
+      'status': 'pending_review',
       'fileUrl': fileUrl,
+      'prediction': {
+        'prediction': prediction,
+        'predictionCode': predictionCode,
+        'probabilityPd': probabilityPd,
+      },
     });
   }
 
+  /// Saves a new MRI scan test with its AI prediction and uploaded image
+  /// URL.
   @override
   Future<void> addMriTest({
     required String patientId,
     required String title,
     required String fileUrl,
+    required String prediction,
+    required int predictionCode,
+    required double probabilityPd,
   }) async {
     await _db.collection('users').doc(patientId).collection('tests').add({
       'title': title,
       'date': _todayLabel(),
       'type': 'mri',
       'createdAt': FieldValue.serverTimestamp(),
-      // No MRI model yet, so there's no prediction — this just records the
-      // upload until Amani's model is ready to analyze it.
-      'status': 'uploaded',
+      'status': 'pending_review',
       'fileUrl': fileUrl,
+      'prediction': {
+        'prediction': prediction,
+        'predictionCode': predictionCode,
+        'probabilityPd': probabilityPd,
+      },
     });
   }
 
+  /// Converts a Firestore `reports` doc into a [CombinedReport].
   CombinedReport _combinedReportFromDoc(
     String patientId,
     DocumentSnapshot<Map<String, dynamic>> doc,
@@ -394,6 +410,8 @@ class FirebaseClinicalDataRepository implements ClinicalDataRepository {
     ];
   }
 
+  /// Creates or updates a report covering multiple tests at once, and
+  /// marks those tests as reviewed when submitted.
   @override
   Future<String> submitCombinedReport({
     String? reportId,
@@ -411,7 +429,7 @@ class FirebaseClinicalDataRepository implements ClinicalDataRepository {
         .collection('reports');
 
     // Look up each test's modality label so the patient app can show what
-    // the report covers without reading every test doc again.
+    // the report covers without re-reading the test docs itself.
     final testTypeLabels = <String>[];
     for (final testId in testIds) {
       final testDoc = await _db
@@ -439,10 +457,8 @@ class FirebaseClinicalDataRepository implements ClinicalDataRepository {
 
     final DocumentReference<Map<String, dynamic>> docRef;
     if (reportId != null) {
-      // `set` (not `update`) so this also works the first time, when the
-      // doc with this id doesn't exist yet — e.g. the deterministic id
-      // `submitReport` passes for a single-test report, which may not have
-      // been created yet on its first draft save.
+      // `set`, not `update`, so this also works the first time the doc
+      // with this id is created.
       docRef = reportsRef.doc(reportId);
       await docRef.set(payload);
     } else {
@@ -450,8 +466,8 @@ class FirebaseClinicalDataRepository implements ClinicalDataRepository {
     }
 
     if (submit) {
-      // Keep the Test History / dashboard status badges consistent with a
-      // combined report having been written for these tests.
+      // Mark each covered test as reviewed so dashboards/status badges
+      // stay consistent with the report having been written.
       for (final testId in testIds) {
         await _db
             .collection('users')

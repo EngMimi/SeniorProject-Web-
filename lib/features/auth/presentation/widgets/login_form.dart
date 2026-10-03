@@ -15,6 +15,7 @@ class LoginForm extends StatefulWidget {
   State<LoginForm> createState() => _LoginFormState();
 }
 
+/// Holds the form's controllers, validates input, and calls [LoginForm.onSubmit].
 class _LoginFormState extends State<LoginForm> {
   final _formKey = GlobalKey<FormState>();
   final _employeeIdController = TextEditingController();
@@ -29,6 +30,7 @@ class _LoginFormState extends State<LoginForm> {
     super.dispose();
   }
 
+  // Validates the fields and, if they're OK, hands the values to onSubmit.
   void _submit() {
     if (_formKey.currentState!.validate()) {
       widget.onSubmit(

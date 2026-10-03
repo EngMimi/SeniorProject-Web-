@@ -17,6 +17,8 @@ import '../../../../shared/widgets/summary_card.dart';
 
 typedef _DashboardData = (List<Patient> patients, List<ClinicalTest> tests);
 
+/// The doctor's home page: quick counts of patients/tests, plus a table
+/// of the most recent test activity.
 class DoctorDashboardPage extends StatelessWidget {
   const DoctorDashboardPage({super.key, required this.repository});
 
@@ -24,6 +26,7 @@ class DoctorDashboardPage extends StatelessWidget {
 
   final ClinicalDataRepository repository;
 
+  // Loads patients and tests together so the dashboard can show both.
   Future<_DashboardData> _load() =>
       (repository.getPatients(), repository.getTests()).wait;
 
@@ -103,12 +106,14 @@ class DoctorDashboardPage extends StatelessWidget {
   }
 }
 
+/// Table of the most recent tests across all of the doctor's patients.
 class _RecentActivityTable extends StatelessWidget {
   const _RecentActivityTable({required this.tests, required this.patientsById});
 
   final List<ClinicalTest> tests;
   final Map<String, Patient> patientsById;
 
+  // Shows the patient's name and ID for one row.
   Widget _patientCell(BuildContext context, ClinicalTest test) {
     final theme = Theme.of(context);
     final patient = patientsById[test.patientId];
@@ -132,6 +137,8 @@ class _RecentActivityTable extends StatelessWidget {
     );
   }
 
+  // "Review" button if the AI result still needs a doctor's review,
+  // otherwise just "Open".
   Widget _action(BuildContext context, ClinicalTest test) {
     final needsReview = test.status == AnalysisStatus.readyForReview;
     return TextButton(

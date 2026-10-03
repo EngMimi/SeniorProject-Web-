@@ -18,12 +18,8 @@ typedef SaveReport =
       required bool submit,
     });
 
-/// The doctor's diagnostic report for a test.
-///
-/// Shows an editable form for new or draft reports and a read-only view for
-/// submitted ones. [onSave] persists the report; once a submitted report
-/// comes back from the reload it triggers, this switches to the read-only
-/// view automatically.
+/// The doctor's diagnostic report for a test. Shows an editable form for
+/// a new or draft report, and a read-only view once it's submitted.
 class DiagnosticReportSection extends StatelessWidget {
   const DiagnosticReportSection({
     super.key,
@@ -53,6 +49,7 @@ class DiagnosticReportSection extends StatelessWidget {
   }
 }
 
+/// Read-only view of a report that's already been submitted.
 class _SubmittedReport extends StatelessWidget {
   const _SubmittedReport({required this.report});
 
@@ -86,6 +83,8 @@ class _SubmittedReport extends StatelessWidget {
   }
 }
 
+/// Editable form for writing or editing a report, with "Save Draft" and
+/// "Submit" buttons.
 class _ReportForm extends StatefulWidget {
   const _ReportForm({required this.draft, required this.onSave});
 
@@ -118,6 +117,8 @@ class _ReportFormState extends State<_ReportForm> {
     super.dispose();
   }
 
+  // Validates the form (only required when submitting), then calls
+  // [onSave] to persist the report as a draft or a final submission.
   Future<void> _save({required bool submit}) async {
     if (submit && !_formKey.currentState!.validate()) {
       setState(() => _autovalidateMode = AutovalidateMode.onUserInteraction);

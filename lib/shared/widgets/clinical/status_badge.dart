@@ -5,6 +5,7 @@ import '../../../core/theme/app_radius.dart';
 import '../../models/clinical_test.dart';
 import '../../models/diagnostic_report.dart';
 
+/// Color pair (background + text/icon) a [StatusBadge] can be shown in.
 enum StatusTone {
   neutral(AppColors.neutralSurface, AppColors.neutralForeground),
   info(AppColors.infoSurface, AppColors.infoForeground),
@@ -60,6 +61,7 @@ class StatusBadge extends StatelessWidget {
   }
 }
 
+/// Badge for a test's AI analysis status (pending, processing, etc.).
 class AnalysisStatusBadge extends StatelessWidget {
   const AnalysisStatusBadge({super.key, required this.status});
 
@@ -141,6 +143,7 @@ class ResultAvailabilityLabel extends StatelessWidget {
   }
 }
 
+/// Icon that represents a test modality (voice, spiral drawing, MRI).
 IconData modalityIcon(TestModality modality) => switch (modality) {
   TestModality.voice => Icons.mic_none_outlined,
   TestModality.spiral => Icons.gesture,

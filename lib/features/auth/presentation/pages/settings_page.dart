@@ -1,3 +1,6 @@
+// Settings page: shows the signed-in account's info, a change-password
+// form, and a sign-out button.
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -62,6 +65,8 @@ class _ChangePasswordCard extends StatefulWidget {
   State<_ChangePasswordCard> createState() => _ChangePasswordCardState();
 }
 
+/// Form for changing the account password, with validation and a loading
+/// state while the request is in flight.
 class _ChangePasswordCardState extends State<_ChangePasswordCard> {
   final _formKey = GlobalKey<FormState>();
   final _currentController = TextEditingController();
@@ -78,6 +83,7 @@ class _ChangePasswordCardState extends State<_ChangePasswordCard> {
     super.dispose();
   }
 
+  // Validates the form, then calls AuthService to change the password.
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) {
       setState(() => _autovalidateMode = AutovalidateMode.onUserInteraction);
@@ -188,15 +194,14 @@ class _SignOutCard extends StatefulWidget {
 class _SignOutCardState extends State<_SignOutCard> {
   bool _signingOut = false;
 
+  // Signs out, then navigates to login as a fallback in case the router's
+  // own redirect (listening to AuthService) doesn't fire right away —
+  // otherwise the button could look like it did nothing.
   Future<void> _signOut() async {
     if (_signingOut) return;
     setState(() => _signingOut = true);
     try {
       await AuthService.instance.signOut();
-      // The router's redirect (gated on AuthService) normally sends us back
-      // to the login page on its own once sign-out completes. This direct
-      // navigation is a safety net in case that doesn't fire for any
-      // reason, so the button never appears to do nothing.
       if (mounted) context.go(AppRoutes.login);
     } catch (e) {
       if (!mounted) return;

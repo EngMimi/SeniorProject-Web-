@@ -1,4 +1,5 @@
-/// Spacing scale shared across the app.
+// Shared spacing values (padding/margins) used across the app,
+// so everything lines up consistently.
 abstract final class AppSpacing {
   static const double xs = 4;
   static const double sm = 8;

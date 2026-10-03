@@ -1,3 +1,6 @@
+// Sign-in page for doctors and radiologists. Shows a brand panel next to
+// the sign-in card on wide screens, and just the card on narrow ones.
+
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -14,11 +17,9 @@ const _appSubtitle =
     'Multi-Modal Parkinson’s Detection and Telemonitoring System';
 const _maxContentWidth = 420.0;
 
-/// Welcome/sign-in page of the web portal for doctors and radiologists.
-///
-/// Signs in through [AuthService.instance]. Once sign-in succeeds, the
-/// router's redirect (listening to the same [AuthService]) takes the user to
-/// their role's dashboard — there is intentionally no role selection here.
+/// Welcome/sign-in page. Signs in through [AuthService.instance]; once
+/// that succeeds, the router sends the user to their role's dashboard on
+/// its own, so there's no role picker here.
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
 
@@ -85,6 +86,7 @@ class _SignInCard extends StatefulWidget {
 class _SignInCardState extends State<_SignInCard> {
   bool _submitting = false;
 
+  // Calls AuthService and shows an error snackbar if sign-in fails.
   Future<void> _onSubmit(String employeeId, String password) async {
     setState(() => _submitting = true);
     final error = await AuthService.instance.signIn(employeeId, password);
@@ -175,7 +177,8 @@ class _BrandHeader extends StatelessWidget {
   }
 }
 
-/// Navy brand panel shown beside the card on expanded widths.
+/// Navy brand panel shown beside the card on wide screens: app name,
+/// who the portal is for, and the AI decision-support disclaimer.
 class _BrandPanel extends StatelessWidget {
   const _BrandPanel();
 
@@ -272,6 +275,7 @@ class _BrandPanel extends StatelessWidget {
   }
 }
 
+/// One row in the brand panel describing a target audience (e.g. doctors).
 class _AudienceItem extends StatelessWidget {
   const _AudienceItem({
     required this.icon,

@@ -8,6 +8,7 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/utils/date_format.dart';
 import '../../../../shared/data/clinical_data_repository.dart';
 import '../../../../shared/data/cloudinary_upload_service.dart';
+import '../../../../shared/data/drawing_model_service.dart';
 import '../../../../shared/data/voice_model_service.dart';
 import '../../../../shared/models/clinical_test.dart';
 import '../../../../shared/models/patient.dart';
@@ -23,6 +24,8 @@ import '../../../../shared/widgets/section_card.dart';
 
 typedef _ProfileData = (Patient? patient, List<ClinicalTest> tests);
 
+/// One patient's profile: their details, test history, and buttons to
+/// upload a new voice or drawing test.
 class DoctorPatientProfilePage extends StatefulWidget {
   const DoctorPatientProfilePage({
     super.key,
@@ -117,8 +120,8 @@ class PatientNotFound extends StatelessWidget {
 ///
 /// Voice: picks a CSV of pre-computed acoustic features, sends it to the
 /// live voice model, and saves a real prediction. Drawing: picks an image
-/// file, uploads it to Cloudinary, and creates a test pending review (no
-/// drawing model exists yet).
+/// file, sends it to the live drawing model for a real prediction, then
+/// uploads the image itself to Cloudinary so it stays viewable.
 class _UploadActions extends StatefulWidget {
   const _UploadActions({
     required this.patientId,
@@ -152,6 +155,8 @@ class _UploadActionsState extends State<_UploadActions> {
       ..showSnackBar(SnackBar(content: Text(message)));
   }
 
+  // Lets the doctor pick a CSV of voice features, runs it through the
+  // voice model, and saves the resulting prediction as a new test.
   Future<void> _pickVoiceFile() async {
     if (_busy) return;
     try {
@@ -197,9 +202,8 @@ class _UploadActionsState extends State<_UploadActions> {
     }
   }
 
-  /// Parses the first data row of a CSV whose header row contains (at
-  /// least) the columns the voice model expects. Returns null and shows an
-  /// error if the file doesn't have the required columns.
+  // Reads the first data row of the CSV into the features the voice model
+  // needs. Shows an error and returns null if a required column is missing.
   Map<String, double>? _parseFeaturesFromCsv(String content) {
     final rows = const CsvToListConverter(eol: '\n').convert(content);
     if (rows.length < 2) {
@@ -239,6 +243,8 @@ class _UploadActionsState extends State<_UploadActions> {
     return features;
   }
 
+  // Lets the doctor pick a drawing image, runs it through the drawing
+  // model, uploads the image to Cloudinary, then saves the prediction.
   Future<void> _pickDrawingFile() async {
     if (_busy) return;
     try {
@@ -258,8 +264,16 @@ class _UploadActionsState extends State<_UploadActions> {
 
       setState(() {
         _active = _UploadKind.drawing;
-        _busyMessage = 'Uploading...';
+        _busyMessage = 'Analyzing drawing...';
       });
+
+      final prediction = await DrawingModelService.instance.predict(
+        bytes: bytes,
+        filename: file.name,
+      );
+
+      if (!mounted) return;
+      setState(() => _busyMessage = 'Uploading...');
 
       final url = await CloudinaryUploadService.instance.uploadImage(
         bytes: bytes,
@@ -269,14 +283,14 @@ class _UploadActionsState extends State<_UploadActions> {
         patientId: widget.patientId,
         title: file.name,
         fileUrl: url,
+        prediction: prediction.prediction,
+        predictionCode: prediction.predictionCode,
+        probabilityPd: prediction.parkinsonProbability,
       );
 
       if (!mounted) return;
       setState(() => _active = null);
-      _showMessage(
-        'Drawing uploaded. It will be analyzed once the drawing model is '
-        'ready.',
-      );
+      _showMessage('Drawing uploaded and analyzed.');
       widget.onUploaded();
     } catch (e) {
       if (!mounted) return;
@@ -326,6 +340,7 @@ class _UploadActionsState extends State<_UploadActions> {
   }
 }
 
+/// Quick summary card: patient details plus how many tests they have.
 class _PatientSummary extends StatelessWidget {
   const _PatientSummary({required this.patient, required this.tests});
 
@@ -359,6 +374,7 @@ class _PatientSummary extends StatelessWidget {
   }
 }
 
+/// Table of the patient's tests, with chips to filter by test type.
 class _TestHistory extends StatefulWidget {
   const _TestHistory({required this.patientId, required this.tests});
 
@@ -376,6 +392,7 @@ class _TestHistoryState extends State<_TestHistory> {
   Widget _resultCell(BuildContext context, ClinicalTest test) =>
       ResultAvailabilityLabel(status: test.status);
 
+  // "View Analysis" button that opens the test analysis page.
   Widget _action(BuildContext context, ClinicalTest test) => TextButton(
     onPressed: () =>
         context.go(AppRoutes.doctorTestAnalysis(widget.patientId, test.id)),

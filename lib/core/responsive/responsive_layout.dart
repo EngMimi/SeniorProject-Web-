@@ -2,10 +2,9 @@ import 'package:flutter/widgets.dart';
 
 import 'breakpoints.dart';
 
-/// Picks a builder based on the available width.
-///
-/// [medium] falls back to [compact], and [expanded] falls back to [medium]
-/// (then [compact]), so only [compact] is required.
+// A widget that picks which layout to build (compact/medium/expanded)
+// based on how much width is available. Only `compact` is required;
+// `medium` and `expanded` fall back to the smaller ones if not given.
 class ResponsiveLayout extends StatelessWidget {
   const ResponsiveLayout({
     super.key,
@@ -20,6 +19,8 @@ class ResponsiveLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // LayoutBuilder gives us the actual available width so we can
+    // choose the matching builder below.
     return LayoutBuilder(
       builder: (context, constraints) {
         final builder = switch (Breakpoints.fromWidth(constraints.maxWidth)) {

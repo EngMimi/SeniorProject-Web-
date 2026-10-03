@@ -122,13 +122,12 @@ void main() {
       expect(find.text('Upload Spiral Drawing'), findsOneWidget);
       expect(find.textContaining('Upload MRI'), findsNothing);
 
-      await tester.tap(find.widgetWithText(ChoiceChip, 'MRI'));
-      await tester.pumpAndSettle();
+      await _tapVisible(tester, find.widgetWithText(ChoiceChip, 'MRI'));
       expect(find.text('View Analysis'), findsOneWidget);
 
-      await tester.tap(find.text('Upload Voice Recording'));
-      await tester.pump();
-      expect(find.textContaining('not available'), findsOneWidget);
+      // "Upload Voice Recording" now opens a real file picker (runs the
+      // live voice model on submit), which isn't exercised here — same as
+      // the radiologist's MRI upload button in radiologist_flow_test.dart.
     });
 
     testWidgets('patient without tests shows an empty state', (tester) async {
@@ -154,8 +153,7 @@ void main() {
     testWidgets('View Analysis opens the selected test', (tester) async {
       await _pumpAt(tester, AppRoutes.doctorPatientProfile(_alexId));
 
-      await tester.tap(find.widgetWithText(ChoiceChip, 'MRI'));
-      await tester.pumpAndSettle();
+      await _tapVisible(tester, find.widgetWithText(ChoiceChip, 'MRI'));
       await _tapVisible(tester, find.text('View Analysis'));
 
       expect(find.text('MRI Analysis'), findsOneWidget);

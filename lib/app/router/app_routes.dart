@@ -19,6 +19,8 @@ abstract final class AppRoutes {
   static const String doctorSettings = '$doctorRoot/settings';
   static const String doctorSettingsName = 'doctor-settings';
 
+  // Helpers below build the actual URL for a given patient/test, since
+  // those routes need a real ID filled in (not just the path pattern).
   static String doctorPatientProfile(String patientId) =>
       '$doctorPatients/$patientId';
 

@@ -8,6 +8,7 @@ import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../shared/data/clinical_data_repository.dart';
 import '../../../../shared/data/cloudinary_upload_service.dart';
+import '../../../../shared/data/mri_model_service.dart';
 import '../../../../shared/models/patient.dart';
 import '../../../../shared/widgets/breadcrumbs.dart';
 import '../../../../shared/widgets/future_content.dart';
@@ -18,12 +19,10 @@ import '../../../../shared/widgets/section_card.dart';
 import '../../../../shared/widgets/ui_only_feedback.dart';
 import 'radiologist_patient_mri_history_page.dart';
 
-/// MRI scan upload and submission for AI analysis.
-///
-/// The upload itself is real (the file goes to Cloudinary and the test
-/// record is created, same as the doctor's spiral-drawing upload) — only
-/// the analysis pipeline isn't, since no MRI model exists yet. A submitted
-/// scan is created pending review, like the drawing upload.
+// Lets the radiologist pick an MRI image and submit it for AI analysis.
+// The scan is sent to the MRI model for a prediction, then uploaded to
+// Cloudinary so it stays viewable (same pattern as the doctor's spiral
+// drawing upload).
 class RadiologistMriUploadPage extends StatelessWidget {
   const RadiologistMriUploadPage({
     super.key,
@@ -111,6 +110,7 @@ class RadiologistMriUploadPage extends StatelessWidget {
   }
 }
 
+// The card with the file picker and the submit/cancel buttons.
 class _UploadCard extends StatefulWidget {
   const _UploadCard({
     required this.patientId,
@@ -129,7 +129,9 @@ class _UploadCard extends StatefulWidget {
 class _UploadCardState extends State<_UploadCard> {
   PlatformFile? _picked;
   bool _submitting = false;
+  String _submittingMessage = 'Uploading...';
 
+  // Opens the file picker and stores the chosen MRI image.
   Future<void> _selectFile() async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
@@ -146,14 +148,28 @@ class _UploadCardState extends State<_UploadCard> {
     setState(() => _picked = file);
   }
 
+  // Sends the picked file to the MRI model for a prediction, uploads it to
+  // Cloudinary, then saves the new MRI test record and goes back to the
+  // patient's MRI history.
   Future<void> _submit() async {
     final file = _picked;
     if (file == null) {
       showUiOnlyMessage(context, 'Select an MRI scan file first.');
       return;
     }
-    setState(() => _submitting = true);
+    setState(() {
+      _submitting = true;
+      _submittingMessage = 'Analyzing MRI scan...';
+    });
     try {
+      final prediction = await MriModelService.instance.predict(
+        bytes: file.bytes!,
+        filename: file.name,
+      );
+
+      if (!mounted) return;
+      setState(() => _submittingMessage = 'Uploading...');
+
       final url = await CloudinaryUploadService.instance.uploadImage(
         bytes: file.bytes!,
         filename: file.name,
@@ -162,13 +178,12 @@ class _UploadCardState extends State<_UploadCard> {
         patientId: widget.patientId,
         title: file.name,
         fileUrl: url,
+        prediction: prediction.prediction,
+        predictionCode: prediction.predictionCode,
+        probabilityPd: prediction.probabilityPd,
       );
       if (!mounted) return;
-      showUiOnlyMessage(
-        context,
-        'MRI scan uploaded. It will be analyzed once the MRI model is '
-        'ready.',
-      );
+      showUiOnlyMessage(context, 'MRI scan uploaded and analyzed.');
       context.go(widget.historyLocation);
     } catch (e) {
       if (!mounted) return;
@@ -264,7 +279,7 @@ class _UploadCardState extends State<_UploadCard> {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.send_outlined, size: 18),
-                label: Text(_submitting ? 'Uploading...' : 'Submit for Analysis'),
+                label: Text(_submitting ? _submittingMessage : 'Submit for Analysis'),
               ),
             ],
           ),
@@ -274,6 +289,7 @@ class _UploadCardState extends State<_UploadCard> {
   }
 }
 
+// Side card explaining what happens after the scan is submitted.
 class _NextStepsCard extends StatelessWidget {
   const _NextStepsCard();
 
@@ -333,7 +349,7 @@ class _NextStepsCard extends StatelessWidget {
   }
 }
 
-/// Draws a dashed rounded rectangle around the upload area.
+// Draws the dashed border around the file-drop area.
 class _DashedBorderPainter extends CustomPainter {
   const _DashedBorderPainter({required this.color});
 

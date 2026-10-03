@@ -37,7 +37,11 @@ GoRouter createAppRouter({
 
   return GoRouter(
     initialLocation: initialLocation,
+    // Re-run the redirect logic below whenever auth state changes
+    // (sign in, sign out, role loaded).
     refreshListenable: AuthService.instance,
+    // Guards every route: sends signed-out users to login, and keeps
+    // each signed-in role inside its own section of the app.
     redirect: (context, state) {
       final auth = AuthService.instance;
       // Auth state hasn't resolved yet (first frame); don't redirect until
@@ -79,9 +83,10 @@ GoRouter createAppRouter({
         builder: (context, state) => const LoginPage(),
       ),
 
-      // Doctor
+      // Doctor routes, all wrapped in the shared DoctorShell (nav + layout).
       GoRoute(
         path: AppRoutes.doctorRoot,
+        // Visiting the bare "/doctor" sends you to the dashboard.
         redirect: (context, state) => AppRoutes.doctorDashboard,
       ),
       ShellRoute(
@@ -136,9 +141,10 @@ GoRouter createAppRouter({
         ],
       ),
 
-      // Radiologist
+      // Radiologist routes, wrapped in the shared RadiologistShell.
       GoRoute(
         path: AppRoutes.radiologistRoot,
+        // Visiting the bare "/radiologist" sends you to the dashboard.
         redirect: (context, state) => AppRoutes.radiologistDashboard,
       ),
       ShellRoute(
@@ -185,6 +191,7 @@ GoRouter createAppRouter({
         ],
       ),
     ],
+    // Fallback page shown for any unmatched URL.
     errorBuilder: (context, state) => Scaffold(
       body: Center(child: Text('Page not found: ${state.uri.path}')),
     ),

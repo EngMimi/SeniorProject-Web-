@@ -7,7 +7,6 @@ import '../../../../core/utils/date_format.dart';
 import '../../../../features/auth/data/auth_service.dart';
 import '../../../../shared/data/clinical_data_repository.dart';
 import '../../../../shared/models/clinical_test.dart';
-import '../../../../shared/models/combined_report.dart';
 import '../../../../shared/models/diagnostic_report.dart';
 import '../../../../shared/models/patient.dart';
 import '../../../../shared/widgets/breadcrumbs.dart';
@@ -108,6 +107,7 @@ class _CombinedReportForm extends StatefulWidget {
   State<_CombinedReportForm> createState() => _CombinedReportFormState();
 }
 
+/// The checkbox list of tests plus the report form underneath it.
 class _CombinedReportFormState extends State<_CombinedReportForm> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
@@ -130,6 +130,8 @@ class _CombinedReportFormState extends State<_CombinedReportForm> {
     super.dispose();
   }
 
+  // Validates the form (and the test selection, if submitting) then saves
+  // the combined report as a draft or a final submission.
   Future<void> _save({required bool submit}) async {
     final formOk = _formKey.currentState!.validate();
     final hasSelection = _selectedTestIds.isNotEmpty;

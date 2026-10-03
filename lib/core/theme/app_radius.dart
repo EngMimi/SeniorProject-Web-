@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 
-/// Corner radii. Kept small for a restrained, clinical look.
+// Shared corner-radius values, kept small for a clean, clinical look.
 abstract final class AppRadius {
   static const double sm = 6;
   static const double md = 8;

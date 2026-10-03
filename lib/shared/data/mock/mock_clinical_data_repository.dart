@@ -5,6 +5,9 @@ import '../../models/patient.dart';
 import '../clinical_data_repository.dart';
 import 'mock_clinical_data.dart';
 
+// Fake repository for UI development: reads from fictional in-memory
+// data and ignores all writes.
+
 /// In-memory [ClinicalDataRepository] backed by [MockClinicalData].
 class MockClinicalDataRepository implements ClinicalDataRepository {
   const MockClinicalDataRepository();
@@ -78,6 +81,9 @@ class MockClinicalDataRepository implements ClinicalDataRepository {
     required String patientId,
     required String title,
     required String fileUrl,
+    required String prediction,
+    required int predictionCode,
+    required double probabilityPd,
   }) async {
     // Mock data is read-only; see submitReport above.
   }
@@ -87,6 +93,9 @@ class MockClinicalDataRepository implements ClinicalDataRepository {
     required String patientId,
     required String title,
     required String fileUrl,
+    required String prediction,
+    required int predictionCode,
+    required double probabilityPd,
   }) async {
     // Mock data is read-only; see submitReport above.
   }

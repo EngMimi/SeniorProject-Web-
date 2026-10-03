@@ -97,6 +97,7 @@ class RoleShellScaffold extends StatelessWidget {
   }
 }
 
+/// App logo, product name and role label shown in the app bar.
 class _ShellTitle extends StatelessWidget {
   const _ShellTitle({required this.role});
 

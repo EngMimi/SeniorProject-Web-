@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../core/theme/app_theme.dart';
 import 'router/app_router.dart';
 
+// Root widget of the app. Wires up the theme and the router.
 class NeuroInsightApp extends StatefulWidget {
   const NeuroInsightApp({super.key, this.router});
 
@@ -19,6 +20,7 @@ class _NeuroInsightAppState extends State<NeuroInsightApp> {
 
   @override
   void dispose() {
+    // Only dispose the router if we created it ourselves (not a test override).
     if (widget.router == null) _router.dispose();
     super.dispose();
   }

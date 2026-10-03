@@ -20,7 +20,7 @@ import '../../../../shared/widgets/section_card.dart';
 
 typedef _HistoryData = (Patient? patient, List<ClinicalTest> scans);
 
-/// A patient's MRI scans, for the radiologist. Only MRI tests are loaded.
+// Shows one patient's MRI scans and their AI analysis status.
 class RadiologistPatientMriHistoryPage extends StatelessWidget {
   const RadiologistPatientMriHistoryPage({
     super.key,
@@ -31,6 +31,7 @@ class RadiologistPatientMriHistoryPage extends StatelessWidget {
   final String patientId;
   final ClinicalDataRepository repository;
 
+  // Loads the patient plus their MRI scans together.
   Future<_HistoryData> _load() => (
     repository.getPatient(patientId),
     repository.getTests(patientId: patientId, modality: TestModality.mri),
@@ -93,13 +94,20 @@ class RadiologistPatientMriHistoryPage extends StatelessWidget {
               icon: Icons.image_search_outlined,
               padBody: false,
               child: scans.isEmpty
-                  ? const MessageState(
+                  ? MessageState(
                       icon: Icons.image_search_outlined,
                       title: 'No MRI scans yet',
                       message:
-                          'Upload this patient’s first MRI scan using the '
-                          '"Upload MRI Scan" button above to submit it for '
-                          'AI analysis.',
+                          'Upload this patient’s first MRI scan to submit '
+                          'it for AI analysis.',
+                      action: OutlinedButton.icon(
+                        onPressed: () =>
+                            context.go(AppRoutes.radiologistMriUpload(
+                          patient.id,
+                        )),
+                        icon: const Icon(Icons.upload_file, size: 18),
+                        label: const Text('Upload MRI Scan'),
+                      ),
                     )
                   : _MriTable(scans: scans),
             ),
@@ -110,7 +118,7 @@ class RadiologistPatientMriHistoryPage extends StatelessWidget {
   }
 }
 
-/// Shown when a patient ID in a radiologist URL does not exist.
+// Shown when a patient ID in a radiologist URL does not exist.
 class RadiologistPatientNotFound extends StatelessWidget {
   const RadiologistPatientNotFound({super.key});
 
@@ -128,6 +136,7 @@ class RadiologistPatientNotFound extends StatelessWidget {
   }
 }
 
+// Table of this patient's MRI scans, with a button to view each one's result.
 class _MriTable extends StatelessWidget {
   const _MriTable({required this.scans});
 
@@ -216,7 +225,7 @@ class _MriTable extends StatelessWidget {
   }
 }
 
-/// Shows the generic AI analysis status/result of an MRI scan.
+// Opens a popup showing the AI analysis result for one MRI scan.
 void _showAnalysis(BuildContext context, ClinicalTest scan) {
   showDialog<void>(
     context: context,

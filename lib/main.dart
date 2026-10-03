@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'app/app.dart';
 import 'firebase_options.dart';
 
+// App entry point: sets up Firebase, then launches the Flutter app.
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);

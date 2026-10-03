@@ -2,12 +2,12 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
-/// The 43 acoustic feature names the NeuroInsight-PD voice model expects,
-/// in the exact order documented by the model's own /schema endpoint at
-/// https://neuroinsight-voicemodel.onrender.com/schema
-///
-/// Kept identical to neuroinsight_pd_app's voice_model_service.dart so a
-/// CSV accepted by the mobile app is also accepted here.
+// Sends pre-computed voice features to the voice-analysis AI model and
+// reads back its prediction.
+
+/// The 43 acoustic feature names the voice model expects, in the exact
+/// order it requires. Kept the same as the mobile app's list so a CSV
+/// that works there also works here.
 const List<String> voiceModelFeatureNames = [
   'Jitter_rel', 'Jitter_abs', 'Jitter_RAP', 'Jitter_PPQ',
   'Shim_loc', 'Shim_dB', 'Shim_APQ3', 'Shim_APQ5', 'Shi_APQ11',
@@ -19,6 +19,7 @@ const List<String> voiceModelFeatureNames = [
   'Delta7', 'Delta8', 'Delta9', 'Delta10', 'Delta11', 'Delta12',
 ];
 
+/// Holds the voice model's prediction result.
 class VoicePredictionResult {
   final String prediction;
   final int predictionCode;
@@ -39,16 +40,16 @@ class VoicePredictionResult {
   }
 }
 
-/// Talks to the NeuroInsight-PD voice model, hosted separately on Render —
-/// the same model the Patient Mobile Application uses. It expects 43
-/// pre-computed acoustic features (not a raw audio file) — see
-/// [voiceModelFeatureNames] above for the exact names and order.
+/// Talks to the voice AI model hosted on Render (same model the Patient
+/// Mobile App uses). Expects 43 pre-computed features, not a raw audio
+/// file — see [voiceModelFeatureNames] for the exact names and order.
 class VoiceModelService {
   VoiceModelService._();
   static final VoiceModelService instance = VoiceModelService._();
 
   static const _baseUrl = 'https://neuroinsight-voicemodel.onrender.com';
 
+  /// Sends the features to the model and returns its prediction.
   Future<VoicePredictionResult> predict(Map<String, double> features) async {
     final uri = Uri.parse('$_baseUrl/predict');
 

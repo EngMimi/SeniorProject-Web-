@@ -1,17 +1,18 @@
+// Handles sign-in, sign-out, and password changes for the web portal, and
+// keeps track of who is currently signed in and their role.
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
 enum StaffRole { doctor, radiologist }
 
-/// Who is currently signed in, and their role — read from the same
-/// Firestore `users/{uid}` doc the mobile app writes, but only accounts
-/// with `role` == 'doctor' or 'radiologist' are allowed into this portal.
+/// Tracks who is signed in and their role, read from the same Firestore
+/// `users/{uid}` doc the mobile app writes. Only 'doctor' or 'radiologist'
+/// accounts are let into this portal.
 ///
-/// Sign-in is by Employee ID (not email), the same pattern the mobile app
-/// already uses for patients signing in by National ID: look up the
-/// account's email by its `employeeId` field, then sign in with that email
-/// and the given password.
+/// Sign-in uses Employee ID instead of email: we look up the account's
+/// email by its `employeeId` field, then sign in with that email.
 class AuthService extends ChangeNotifier {
   AuthService._({FirebaseAuth? auth, FirebaseFirestore? firestore})
       : _auth = auth ?? FirebaseAuth.instance,
@@ -27,9 +28,8 @@ class AuthService extends ChangeNotifier {
     _auth!.authStateChanges().listen(_onAuthStateChanged);
   }
 
-  /// Test-only: an instance that never touches Firebase, already resolved
-  /// to [role] (or signed out, when [role] is `null`). Production code
-  /// never calls this constructor — see [debugSetInstance].
+  /// Test-only constructor that skips Firebase entirely and just sets the
+  /// state directly (signed out if [role] is null). See [debugSetInstance].
   @visibleForTesting
   AuthService.debug({
     StaffRole? role,
@@ -49,8 +49,8 @@ class AuthService extends ChangeNotifier {
         _phoneNumber = role == null ? null : phoneNumber,
         _role = role;
 
-  /// The instance the whole app reads from. Swappable in widget tests via
-  /// [debugSetInstance] so tests never touch real Firebase.
+  /// The single instance the whole app reads from. Tests can swap it out
+  /// with [debugSetInstance] so they never touch real Firebase.
   static AuthService instance = AuthService._();
 
   @visibleForTesting
@@ -78,6 +78,8 @@ class AuthService extends ChangeNotifier {
   String? get phoneNumber => _phoneNumber;
   StaffRole? get role => _role;
 
+  // Runs whenever Firebase's sign-in state changes. Pulls the user's
+  // profile (name, role, etc.) from Firestore and updates our state.
   Future<void> _onAuthStateChanged(User? user) async {
     final db = _db;
     if (user == null || db == null) {
@@ -112,13 +114,13 @@ class AuthService extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Signs in with an Employee ID and password. Returns `null` on success,
-  /// or a short user-facing error message on failure.
+  /// Signs in with an employee ID and password. Returns null on success,
+  /// or a short message to show the user on failure.
   Future<String?> signIn(String employeeId, String password) async {
     final auth = _auth;
     final db = _db;
     if (auth == null || db == null) {
-      // An AuthService.debug() instance — only reachable in widget tests.
+      // This only happens with a debug AuthService in widget tests.
       return 'Sign-in is not available in this environment.';
     }
 
@@ -151,12 +153,10 @@ class AuthService extends ChangeNotifier {
         password: password,
       );
 
-      // Apply the profile we already looked up above directly, rather than
-      // waiting on the async authStateChanges listener (which can lag
-      // behind — racing it with a guessed delay caused sign-in to
-      // sometimes report "not registered as doctor/radiologist" even for a
-      // valid account). The listener will also fire shortly after and
-      // re-apply the same data from Firestore; that's a harmless no-op.
+      // Set the state now from the profile we just looked up, instead of
+      // waiting for the authStateChanges listener above (which can lag and
+      // briefly show the wrong role). The listener fires soon after too,
+      // but just re-applies the same data, so that's harmless.
       _uid = auth.currentUser?.uid;
       _displayName = data['fullName'] as String? ?? accountEmail;
       _email = accountEmail;
@@ -177,9 +177,8 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-  /// Changes the signed-in user's password. Requires their current
-  /// password to re-authenticate first (Firebase requires a recent sign-in
-  /// for this). Returns `null` on success, or a short error message.
+  /// Changes the signed-in user's password. Firebase requires re-entering
+  /// the current password first to confirm it's really them.
   Future<String?> changePassword({
     required String currentPassword,
     required String newPassword,
@@ -208,14 +207,14 @@ class AuthService extends ChangeNotifier {
     }
   }
 
+  /// Signs the current user out.
   Future<void> signOut() async {
     final auth = _auth;
     if (auth == null) return;
     await auth.signOut();
-    // Update local state immediately rather than waiting for the async
-    // authStateChanges listener to catch up — otherwise a redirect right
-    // after signOut() can run while this service still looks signed in,
-    // which sent people back to the dashboard instead of the login page.
+    // Clear our state right away instead of waiting for the listener above
+    // — otherwise the post-sign-out redirect could run while we still look
+    // signed in, and send people back to the dashboard instead of login.
     _uid = null;
     _displayName = null;
     _email = null;

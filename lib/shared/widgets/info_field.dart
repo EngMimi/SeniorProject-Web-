@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_spacing.dart';
 
+// Small widgets for showing label/value pairs in a grid, e.g. patient details.
+
 /// A label/value pair, e.g. "Age" / "67".
 class InfoField extends StatelessWidget {
   const InfoField({super.key, required this.label, this.value, this.child})

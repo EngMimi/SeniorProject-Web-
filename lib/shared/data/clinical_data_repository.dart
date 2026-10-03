@@ -3,19 +3,21 @@ import '../models/combined_report.dart';
 import '../models/diagnostic_report.dart';
 import '../models/patient.dart';
 
-/// Read/write access to patients, tests and reports.
+// Defines how the app talks to patient/test/report data, without caring
+// whether that data is mock data or real Firestore data.
+
+/// The contract for reading and writing patients, tests and reports.
 ///
-/// The UI depends only on this interface. It is implemented by
-/// [MockClinicalDataRepository] (fictional, in-memory, for development and
-/// tests) and by the real Firestore-backed implementation that talks to the
-/// same Firebase project as the Patient Mobile Application.
+/// The UI only depends on this interface, not on where the data actually
+/// comes from. [MockClinicalDataRepository] implements it with fake
+/// in-memory data for development, and the Firestore-backed class
+/// implements it with the real database shared with the Patient Mobile App.
 abstract interface class ClinicalDataRepository {
   Future<List<Patient>> getPatients();
 
   Future<Patient?> getPatient(String patientId);
 
-  /// Tests, newest first. Limited to one patient when [patientId] is given
-  /// and to one modality when [modality] is given.
+  /// Gets tests, newest first. Can filter to one patient and/or one modality.
   Future<List<ClinicalTest>> getTests({
     String? patientId,
     TestModality? modality,
@@ -27,11 +29,9 @@ abstract interface class ClinicalDataRepository {
 
   Future<DiagnosticReport?> getReportForTest(String testId);
 
-  /// Writes (or overwrites) the doctor's diagnostic report for [testId]
-  /// (owned by [patientId]). Matches the fields the diagnostic report form
-  /// already collects. When [submit] is true the report becomes visible to
-  /// the patient in their mobile app and the test's analysis status becomes
-  /// "Reviewed"; when false it's saved as a draft only the doctor can see.
+  /// Saves the doctor's report for one test. If [submit] is true, it
+  /// becomes visible to the patient and the test is marked "Reviewed";
+  /// otherwise it's saved as a draft only the doctor can see.
   Future<void> submitReport({
     required String patientId,
     required String testId,
@@ -42,10 +42,8 @@ abstract interface class ClinicalDataRepository {
     required bool submit,
   });
 
-  /// Creates a new voice test for [patientId] with an immediate AI
-  /// prediction — the caller has already sent the CSV to the voice model
-  /// and has a result in hand. Matches what the mobile app writes when a
-  /// patient uploads their own voice test.
+  /// Saves a new voice test for [patientId]. The caller has already sent
+  /// the CSV to the voice model and is passing in the prediction result.
   Future<void> addVoiceTest({
     required String patientId,
     required String title,
@@ -54,39 +52,37 @@ abstract interface class ClinicalDataRepository {
     required double probabilityPd,
   });
 
-  /// Creates a new spiral-drawing test for [patientId]. The caller has
-  /// already uploaded the file itself (to Cloudinary); [fileUrl] is where
-  /// to find it. No drawing model exists yet, so the test is created with
-  /// no prediction — pending review once one does.
+  /// Saves a new spiral-drawing test for [patientId]. The image was already
+  /// uploaded to Cloudinary ([fileUrl]) and sent to the drawing model.
   Future<void> addDrawingTest({
     required String patientId,
     required String title,
     required String fileUrl,
+    required String prediction,
+    required int predictionCode,
+    required double probabilityPd,
   });
 
-  /// Creates a new MRI scan test for [patientId]. The caller has already
-  /// uploaded the file itself (to Cloudinary); [fileUrl] is where to find
-  /// it. No MRI model exists yet, so the test is created with no
-  /// prediction — pending review once one does.
+  /// Saves a new MRI scan test for [patientId]. The image was already
+  /// uploaded to Cloudinary ([fileUrl]) and sent to the MRI model.
   Future<void> addMriTest({
     required String patientId,
     required String title,
     required String fileUrl,
+    required String prediction,
+    required int predictionCode,
+    required double probabilityPd,
   });
 
-  /// Combined reports already written for [patientId], newest first.
+  /// Gets combined reports already written for [patientId], newest first.
   Future<List<CombinedReport>> getCombinedReports({
     required String patientId,
   });
 
-  /// Creates or updates a diagnostic report that covers several of
-  /// [patientId]'s tests at once. Pass [reportId] (from a prior draft save)
-  /// to update that same report instead of creating a new one; returns the
-  /// report's id either way, so the caller can keep editing the same draft.
-  ///
-  /// When [submit] is true, every test in [testIds] is also marked
-  /// "reviewed" so the doctor's Test History and dashboard stay consistent
-  /// with the combined report having been written.
+  /// Creates or updates a report covering several of [patientId]'s tests
+  /// at once. Pass [reportId] to update an existing draft instead of
+  /// creating a new one. If [submit] is true, every test in [testIds] is
+  /// also marked "reviewed".
   Future<String> submitCombinedReport({
     String? reportId,
     required String patientId,

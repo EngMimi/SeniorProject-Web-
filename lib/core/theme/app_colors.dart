@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
-/// Central color palette. Widgets should prefer `Theme.of(context).colorScheme`
-/// and only reference these tokens directly for brand/special surfaces.
+// All the app's colors in one place. Most widgets should use
+// Theme.of(context).colorScheme instead; use these directly only for
+// special cases like brand colors or the dev-only banner below.
 abstract final class AppColors {
   // Brand
   static const Color navy = Color(0xFF0B2545);
