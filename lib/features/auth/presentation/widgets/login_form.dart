@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_spacing.dart';
+import 'forgot_password_dialog.dart';
 
 /// Employee ID/password sign-in form.
 ///
@@ -100,7 +101,14 @@ class _LoginFormState extends State<LoginForm> {
               onFieldSubmitted: (_) => _submit(),
               validator: _validatePassword,
             ),
-            const SizedBox(height: AppSpacing.lg),
+            Align(
+              alignment: AlignmentDirectional.centerEnd,
+              child: TextButton(
+                onPressed: () => showForgotPasswordDialog(context),
+                child: const Text('Forgot password?'),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
             FilledButton(onPressed: _submit, child: const Text('Sign In')),
           ],
         ),

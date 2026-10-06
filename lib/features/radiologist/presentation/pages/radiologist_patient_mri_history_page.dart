@@ -72,11 +72,13 @@ class RadiologistPatientMriHistoryPage extends StatelessWidget {
               icon: Icons.person_outline,
               child: InfoGrid(
                 fields: [
+                  InfoField(label: 'First name', value: patient.firstName),
+                  InfoField(label: 'Last name', value: patient.lastName),
                   InfoField(label: 'Patient ID', value: patient.id),
                   InfoField(label: 'National ID', value: patient.nationalId),
                   InfoField(
-                    label: 'Hospital file no.',
-                    value: patient.hospitalFileNo,
+                    label: 'Patient file no.',
+                    value: patient.patientFileNo,
                   ),
                   InfoField(label: 'MRI scans', value: '${scans.length}'),
                   InfoField(

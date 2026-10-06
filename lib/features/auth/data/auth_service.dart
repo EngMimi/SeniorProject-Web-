@@ -177,6 +177,27 @@ class AuthService extends ChangeNotifier {
     }
   }
 
+  /// Sends Firebase's password-reset email to [email], the same way the
+  /// mobile app does. Returns null on success, or a short message to show
+  /// the user on failure.
+  Future<String?> sendPasswordReset(String email) async {
+    final auth = _auth;
+    if (auth == null) {
+      // This only happens with a debug AuthService in widget tests.
+      return 'Password reset is not available in this environment.';
+    }
+    try {
+      await auth.sendPasswordResetEmail(email: email.trim());
+      return null;
+    } on FirebaseAuthException catch (e) {
+      return switch (e.code) {
+        'invalid-email' => 'Please enter a valid email address.',
+        'user-not-found' => 'No account found with that email address.',
+        _ => 'Could not send the reset link. Please try again.',
+      };
+    }
+  }
+
   /// Changes the signed-in user's password. Firebase requires re-entering
   /// the current password first to confirm it's really them.
   Future<String?> changePassword({

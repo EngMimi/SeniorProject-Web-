@@ -7,17 +7,24 @@ class Patient {
   const Patient({
     required this.id,
     required this.fullName,
+    this.firstName = '',
+    this.lastName = '',
     required this.nationalId,
     required this.dateOfBirth,
-    required this.hospitalFileNo,
+    required this.patientFileNo,
   });
 
   final String id;
   final String fullName;
+
+  /// Saved separately by newer mobile sign-ups. For older accounts the
+  /// repository fills these by splitting [fullName].
+  final String firstName;
+  final String lastName;
   final String nationalId;
 
   /// As entered at sign-up, e.g. "12 / 05 / 1990". Not a parsed [DateTime]
   /// since the mobile app stores it as free text.
   final String dateOfBirth;
-  final String hospitalFileNo;
+  final String patientFileNo;
 }

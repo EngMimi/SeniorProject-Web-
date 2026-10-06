@@ -52,7 +52,7 @@ void main() {
       expect(find.text('Doctor Dashboard'), findsOneWidget);
       for (final label in [
         'Total Patients',
-        'Total Voice & Drawing Tests',
+        'Total Tests',
         'Awaiting Review',
       ]) {
         expect(find.text(label), findsOneWidget);
@@ -109,7 +109,7 @@ void main() {
 
       expect(find.text('Patient Summary'), findsOneWidget);
       expect(find.text('Alex Sample'), findsWidgets);
-      expect(find.text('Test History'), findsOneWidget);
+      expect(find.text('MRI Tests'), findsOneWidget);
     });
 
     testWidgets('profile shows test history and doctor upload actions', (
@@ -122,8 +122,10 @@ void main() {
       expect(find.text('Upload Spiral Drawing'), findsOneWidget);
       expect(find.textContaining('Upload MRI'), findsNothing);
 
-      await _tapVisible(tester, find.widgetWithText(ChoiceChip, 'MRI'));
-      expect(find.text('View Analysis'), findsOneWidget);
+      // Tests are grouped into MRI, Voice and Spiral Drawing sections.
+      expect(find.text('MRI Tests'), findsOneWidget);
+      expect(find.text('Voice Tests'), findsOneWidget);
+      expect(find.text('Spiral Drawing Tests'), findsOneWidget);
 
       // "Upload Voice Recording" now opens a real file picker (runs the
       // live voice model on submit), which isn't exercised here — same as
@@ -153,8 +155,8 @@ void main() {
     testWidgets('View Analysis opens the selected test', (tester) async {
       await _pumpAt(tester, AppRoutes.doctorPatientProfile(_alexId));
 
-      await _tapVisible(tester, find.widgetWithText(ChoiceChip, 'MRI'));
-      await _tapVisible(tester, find.text('View Analysis'));
+      // The MRI section is listed first, so its button is the first one.
+      await _tapVisible(tester, find.text('View Analysis').first);
 
       expect(find.text('MRI Analysis'), findsOneWidget);
       expect(find.textContaining('Test $_alexMriReviewedTest'), findsOneWidget);

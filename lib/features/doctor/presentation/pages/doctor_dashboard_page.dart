@@ -43,11 +43,8 @@ class DoctorDashboardPage extends StatelessWidget {
         final reviewed = tests
             .where((t) => t.status == AnalysisStatus.reviewed)
             .length;
-        // MRI scans belong to the radiologist's own dashboard/count — this
-        // card is scoped to the doctor's own test types.
-        final voiceAndDrawingCount = tests
-            .where((t) => t.modality != TestModality.mri)
-            .length;
+        // Counts every test type: voice, drawing and MRI.
+        final totalTests = tests.length;
 
         return PageContainer(
           children: [
@@ -66,10 +63,10 @@ class DoctorDashboardPage extends StatelessWidget {
                   caption: 'In your patient list',
                 ),
                 SummaryCard(
-                  label: 'Total Voice & Drawing Tests',
-                  value: '$voiceAndDrawingCount',
+                  label: 'Total Tests',
+                  value: '$totalTests',
                   icon: Icons.fact_check_outlined,
-                  caption: 'Across all patients',
+                  caption: 'Voice, drawing & MRI',
                 ),
                 SummaryCard(
                   label: 'Awaiting Review',

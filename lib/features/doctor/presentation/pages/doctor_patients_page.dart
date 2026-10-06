@@ -49,14 +49,14 @@ class _DoctorPatientsPageState extends State<DoctorPatientsPage> {
       (widget.repository.getPatients(), widget.repository.getTests()).wait;
 
   // True if the patient matches the current search text (by name, ID,
-  // national ID or hospital file number).
+  // national ID or patient file number).
   bool _matches(Patient patient) {
     final query = _query.trim().toLowerCase();
     return query.isEmpty ||
         patient.fullName.toLowerCase().contains(query) ||
         patient.id.toLowerCase().contains(query) ||
         patient.nationalId.toLowerCase().contains(query) ||
-        patient.hospitalFileNo.toLowerCase().contains(query);
+        patient.patientFileNo.toLowerCase().contains(query);
   }
 
   @override
@@ -182,12 +182,12 @@ class _PatientTable extends StatelessWidget {
           cellBuilder: (_, r) => Text(r.patient.nationalId),
         ),
         TableColumnDef(
-          label: 'Hospital file no.',
+          label: 'Patient file no.',
           flex: 2,
-          cellBuilder: (_, r) => Text(r.patient.hospitalFileNo),
+          cellBuilder: (_, r) => Text(r.patient.patientFileNo),
         ),
         TableColumnDef(
-          label: 'Tests',
+          label: 'No of uploaded files',
           cellBuilder: (_, r) => Text('${r.testCount}'),
         ),
         TableColumnDef(
@@ -218,7 +218,7 @@ class _PatientTable extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  '${row.patient.nationalId} · ${row.patient.hospitalFileNo} · '
+                  '${row.patient.nationalId} · ${row.patient.patientFileNo} · '
                   '${row.testCount} tests · Last: ${_lastTest(row)}',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),

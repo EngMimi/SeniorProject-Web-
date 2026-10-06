@@ -356,12 +356,14 @@ class _PatientSummary extends StatelessWidget {
       icon: Icons.person_outline,
       child: InfoGrid(
         fields: [
+          InfoField(label: 'First name', value: patient.firstName),
+          InfoField(label: 'Last name', value: patient.lastName),
           InfoField(label: 'Patient ID', value: patient.id),
           InfoField(label: 'National ID', value: patient.nationalId),
           InfoField(label: 'Date of birth', value: patient.dateOfBirth),
           InfoField(
-            label: 'Hospital file no.',
-            value: patient.hospitalFileNo,
+            label: 'Patient file no.',
+            value: patient.patientFileNo,
           ),
           InfoField(label: 'Total tests', value: '${tests.length}'),
           InfoField(
@@ -374,20 +376,68 @@ class _PatientSummary extends StatelessWidget {
   }
 }
 
-/// Table of the patient's tests, with chips to filter by test type.
-class _TestHistory extends StatefulWidget {
+/// The patient's tests, shown as three stacked sections (MRI, Voice, Spiral
+/// Drawing), each with its own table, newest first.
+class _TestHistory extends StatelessWidget {
   const _TestHistory({required this.patientId, required this.tests});
 
   final String patientId;
   final List<ClinicalTest> tests;
 
+  // Sections in the order they appear on the page.
+  static const _sections = [
+    (TestModality.mri, 'MRI Tests', 'Brain MRI scans, newest first'),
+    (TestModality.voice, 'Voice Tests', 'Voice recordings, newest first'),
+    (
+      TestModality.spiral,
+      'Spiral Drawing Tests',
+      'Spiral drawings, newest first',
+    ),
+  ];
+
   @override
-  State<_TestHistory> createState() => _TestHistoryState();
+  Widget build(BuildContext context) {
+    if (tests.isEmpty) {
+      return const SectionCard(
+        title: 'Test History',
+        icon: Icons.history,
+        child: Text('No tests have been recorded for this patient yet.'),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      spacing: AppSpacing.lg,
+      children: [
+        for (final (modality, title, subtitle) in _sections)
+          _ModalitySection(
+            patientId: patientId,
+            title: title,
+            subtitle: subtitle,
+            // Newest first, whatever order the list arrives in.
+            tests: [
+              for (final t in tests)
+                if (t.modality == modality) t,
+            ]..sort((a, b) => b.takenOn.compareTo(a.takenOn)),
+          ),
+      ],
+    );
+  }
 }
 
-class _TestHistoryState extends State<_TestHistory> {
-  /// `null` shows all modalities.
-  TestModality? _filter;
+/// One section's table of tests.
+class _ModalitySection extends StatelessWidget {
+  const _ModalitySection({
+    required this.patientId,
+    required this.title,
+    required this.subtitle,
+    required this.tests,
+  });
+
+  final String patientId;
+  final String title;
+  final String subtitle;
+  final List<ClinicalTest> tests;
 
   Widget _resultCell(BuildContext context, ClinicalTest test) =>
       ResultAvailabilityLabel(status: test.status);
@@ -395,7 +445,7 @@ class _TestHistoryState extends State<_TestHistory> {
   // "View Analysis" button that opens the test analysis page.
   Widget _action(BuildContext context, ClinicalTest test) => TextButton(
     onPressed: () =>
-        context.go(AppRoutes.doctorTestAnalysis(widget.patientId, test.id)),
+        context.go(AppRoutes.doctorTestAnalysis(patientId, test.id)),
     style: TextButton.styleFrom(
       padding: EdgeInsets.zero,
       minimumSize: Size.zero,
@@ -406,104 +456,69 @@ class _TestHistoryState extends State<_TestHistory> {
 
   @override
   Widget build(BuildContext context) {
-    final tests = [
-      for (final test in widget.tests)
-        if (_filter == null || test.modality == _filter) test,
-    ];
-
     return SectionCard(
-      title: 'Test History',
-      subtitle: 'Voice, spiral drawing and MRI tests, newest first',
+      title: title,
+      subtitle: subtitle,
       icon: Icons.history,
       padBody: false,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            child: Wrap(
-              spacing: AppSpacing.sm,
-              runSpacing: AppSpacing.sm,
-              children: [
-                for (final option in <TestModality?>[
-                  null,
-                  ...TestModality.values,
-                ])
-                  ChoiceChip(
-                    label: Text(option?.label ?? 'All'),
-                    selected: _filter == option,
-                    onSelected: (_) => setState(() => _filter = option),
-                  ),
-              ],
-            ),
+      child: ResponsiveTable<ClinicalTest>(
+        rows: tests,
+        emptyMessage: 'No tests of this type yet.',
+        columns: [
+          TableColumnDef(
+            label: 'Test modality',
+            flex: 2,
+            cellBuilder: (_, t) => ModalityLabel(modality: t.modality),
           ),
-          const Divider(height: 1),
-          ResponsiveTable<ClinicalTest>(
-            rows: tests,
-            emptyMessage: widget.tests.isEmpty
-                ? 'No tests have been recorded for this patient yet.'
-                : 'No tests for this modality.',
-            columns: [
-              TableColumnDef(
-                label: 'Test modality',
-                flex: 2,
-                cellBuilder: (_, t) => ModalityLabel(modality: t.modality),
-              ),
-              TableColumnDef(
-                label: 'Date',
-                flex: 2,
-                cellBuilder: (_, t) => Text(formatDate(t.takenOn)),
-              ),
-              TableColumnDef(
-                label: 'Analysis status',
-                flex: 2,
-                cellBuilder: (_, t) => AnalysisStatusBadge(status: t.status),
-              ),
-              TableColumnDef(
-                label: 'Result',
-                flex: 2,
-                cellBuilder: _resultCell,
-              ),
-              TableColumnDef(
-                label: 'Action',
-                flex: 2,
-                alignEnd: true,
-                cellBuilder: _action,
-              ),
-            ],
-            compactRowBuilder: (context, test) => Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: AppSpacing.sm,
-              children: [
-                Row(
-                  children: [
-                    Expanded(child: ModalityLabel(modality: test.modality)),
-                    AnalysisStatusBadge(status: test.status),
-                  ],
-                ),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Wrap(
-                        spacing: AppSpacing.md,
-                        runSpacing: AppSpacing.xs,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: [
-                          Text(
-                            formatDate(test.takenOn),
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                          _resultCell(context, test),
-                        ],
-                      ),
-                    ),
-                    _action(context, test),
-                  ],
-                ),
-              ],
-            ),
+          TableColumnDef(
+            label: 'Date',
+            flex: 2,
+            cellBuilder: (_, t) => Text(formatDate(t.takenOn)),
+          ),
+          TableColumnDef(
+            label: 'Analysis status',
+            flex: 2,
+            cellBuilder: (_, t) => AnalysisStatusBadge(status: t.status),
+          ),
+          TableColumnDef(label: 'Result', flex: 2, cellBuilder: _resultCell),
+          TableColumnDef(
+            label: 'Action',
+            flex: 2,
+            alignEnd: true,
+            cellBuilder: _action,
           ),
         ],
+        compactRowBuilder: (context, test) => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          spacing: AppSpacing.sm,
+          children: [
+            Row(
+              children: [
+                Expanded(child: ModalityLabel(modality: test.modality)),
+                AnalysisStatusBadge(status: test.status),
+              ],
+            ),
+            Row(
+              children: [
+                Expanded(
+                  child: Wrap(
+                    spacing: AppSpacing.md,
+                    runSpacing: AppSpacing.xs,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Text(
+                        formatDate(test.takenOn),
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                      _resultCell(context, test),
+                    ],
+                  ),
+                ),
+                _action(context, test),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

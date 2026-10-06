@@ -178,9 +178,9 @@ class _PatientTable extends StatelessWidget {
           cellBuilder: (_, r) => Text(r.patient.nationalId),
         ),
         TableColumnDef(
-          label: 'Hospital file no.',
+          label: 'Patient file no.',
           flex: 2,
-          cellBuilder: (_, r) => Text(r.patient.hospitalFileNo),
+          cellBuilder: (_, r) => Text(r.patient.patientFileNo),
         ),
         TableColumnDef(
           label: 'MRI scans',
@@ -219,7 +219,7 @@ class _PatientTable extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  '${row.patient.nationalId} · ${row.patient.hospitalFileNo} · '
+                  '${row.patient.nationalId} · ${row.patient.patientFileNo} · '
                   '${row.scanCount} MRI · Latest: ${_latestDate(row)}',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),

@@ -32,12 +32,17 @@ class FirebaseClinicalDataRepository implements ClinicalDataRepository {
   /// Converts a Firestore `users` doc into a [Patient].
   Patient _patientFromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data() ?? const {};
+    final fullName = data['fullName'] as String? ?? '';
+    final nameParts = fullName.trim().split(RegExp(r'\s+'));
     return Patient(
       id: doc.id,
-      fullName: data['fullName'] as String? ?? '',
+      fullName: fullName,
+      // Older accounts have no firstName/lastName, so split fullName.
+      firstName: data['firstName'] as String? ?? nameParts.first,
+      lastName: data['lastName'] as String? ?? nameParts.skip(1).join(' '),
       nationalId: data['nationalId'] as String? ?? '',
       dateOfBirth: data['dateOfBirth'] as String? ?? '',
-      hospitalFileNo: data['hospitalFileNo'] as String? ?? '',
+      patientFileNo: data['patientFileNo'] as String? ?? '',
     );
   }
 
