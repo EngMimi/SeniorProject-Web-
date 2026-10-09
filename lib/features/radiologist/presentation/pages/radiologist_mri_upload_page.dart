@@ -135,7 +135,7 @@ class _UploadCardState extends State<_UploadCard> {
   Future<void> _selectFile() async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
-      allowedExtensions: ['png', 'jpg', 'jpeg', 'pdf'],
+      allowedExtensions: ['png', 'jpg', 'jpeg'],
       withData: true,
     );
     if (result == null || result.files.isEmpty) return;
@@ -237,7 +237,7 @@ class _UploadCardState extends State<_UploadCard> {
                     ),
                     if (picked == null)
                       Text(
-                        'Accepted formats: PNG, JPG, JPEG, PDF.',
+                        'Accepted formats: PNG, JPG, JPEG.',
                         textAlign: TextAlign.center,
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
@@ -335,9 +335,8 @@ class _NextStepsCard extends StatelessWidget {
               ],
             ),
           Text(
-            'AI analysis is not connected yet — the scan is stored and '
-            'marked pending until a model is ready to review it. AI '
-            'results are decision-support information only; diagnostic '
+            'The scan is uploaded and sent to the MRI model for analysis. '
+            'AI results are decision-support information only; diagnostic '
             'decisions remain with the treating doctor.',
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,

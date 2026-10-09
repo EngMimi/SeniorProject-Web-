@@ -53,8 +53,8 @@ class ClinicalTest {
   final AnalysisStatus status;
   final DateTime? analysisCompletedOn;
 
-  /// e.g. "PD" or "Healthy" — populated for voice and drawing tests; still
-  /// null for MRI until that model exists.
+  /// e.g. "PD" or "Healthy" — populated for voice, drawing and MRI tests
+  /// once their model has returned a result.
   final String? aiPrediction;
   final int? aiPredictionCode;
   final double? aiProbabilityPd;

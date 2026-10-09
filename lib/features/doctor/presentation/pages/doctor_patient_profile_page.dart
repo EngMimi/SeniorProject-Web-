@@ -250,7 +250,7 @@ class _UploadActionsState extends State<_UploadActions> {
     try {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['png', 'jpg', 'jpeg', 'pdf'],
+        allowedExtensions: ['png', 'jpg', 'jpeg'],
         withData: true,
       );
       if (result == null || result.files.isEmpty) return;
