@@ -157,10 +157,14 @@ class _UploadCardState extends State<_UploadCard> {
       showUiOnlyMessage(context, 'Select an MRI scan file first.');
       return;
     }
+
     setState(() {
       _submitting = true;
       _submittingMessage = 'Analyzing MRI scan...';
     });
+
+    final stopwatch = Stopwatch()..start();
+
     try {
       final prediction = await MriModelService.instance.predict(
         bytes: file.bytes!,
@@ -174,6 +178,7 @@ class _UploadCardState extends State<_UploadCard> {
         bytes: file.bytes!,
         filename: file.name,
       );
+
       await widget.repository.addMriTest(
         patientId: widget.patientId,
         title: file.name,
@@ -182,16 +187,32 @@ class _UploadCardState extends State<_UploadCard> {
         predictionCode: prediction.predictionCode,
         probabilityPd: prediction.probabilityPd,
       );
+
+      stopwatch.stop();
+      final seconds = stopwatch.elapsedMicroseconds / 1000000;
+
+      debugPrint(
+        'PERFORMANCE | WEB-PT04 | MRI analysis, upload and saving | '
+        '${seconds.toStringAsFixed(3)} seconds | SUCCESS',
+      );
+
       if (!mounted) return;
       showUiOnlyMessage(context, 'MRI scan uploaded and analyzed.');
       context.go(widget.historyLocation);
     } catch (e) {
+      stopwatch.stop();
+      final seconds = stopwatch.elapsedMicroseconds / 1000000;
+
+      debugPrint(
+        'PERFORMANCE | WEB-PT04 | MRI analysis, upload and saving | '
+        '${seconds.toStringAsFixed(3)} seconds | ERROR',
+      );
+
       if (!mounted) return;
       setState(() => _submitting = false);
-      showUiOnlyMessage(
-        context,
-        e.toString().replaceFirst('Exception: ', ''),
-      );
+      showUiOnlyMessage(context, e.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      stopwatch.stop();
     }
   }
 
@@ -248,7 +269,9 @@ class _UploadCardState extends State<_UploadCard> {
                       onPressed: _submitting ? null : _selectFile,
                       icon: const Icon(Icons.folder_open_outlined, size: 18),
                       label: Text(
-                        picked == null ? 'Select MRI Scan File' : 'Choose a different file',
+                        picked == null
+                            ? 'Select MRI Scan File'
+                            : 'Choose a different file',
                       ),
                     ),
                   ],
@@ -279,7 +302,9 @@ class _UploadCardState extends State<_UploadCard> {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.send_outlined, size: 18),
-                label: Text(_submitting ? _submittingMessage : 'Submit for Analysis'),
+                label: Text(
+                  _submitting ? _submittingMessage : 'Submit for Analysis',
+                ),
               ),
             ],
           ),

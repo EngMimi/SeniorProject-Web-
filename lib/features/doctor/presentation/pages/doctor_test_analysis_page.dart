@@ -45,8 +45,7 @@ class DoctorTestAnalysisPage extends StatefulWidget {
   final ClinicalDataRepository repository;
 
   @override
-  State<DoctorTestAnalysisPage> createState() =>
-      _DoctorTestAnalysisPageState();
+  State<DoctorTestAnalysisPage> createState() => _DoctorTestAnalysisPageState();
 }
 
 class _DoctorTestAnalysisPageState extends State<DoctorTestAnalysisPage> {
@@ -55,11 +54,42 @@ class _DoctorTestAnalysisPageState extends State<DoctorTestAnalysisPage> {
   int _reloadToken = 0;
 
   // Loads the patient, the test, and any existing report for it together.
-  Future<_AnalysisData> _load() => (
-    widget.repository.getPatient(widget.patientId),
-    widget.repository.getTest(widget.testId),
-    widget.repository.getReportForTest(widget.testId),
-  ).wait;
+  Future<_AnalysisData> _load() async {
+    final stopwatch = Stopwatch()..start();
+
+    try {
+      final data = await (
+        widget.repository.getPatient(widget.patientId),
+        widget.repository.getTest(widget.testId),
+        widget.repository.getReportForTest(widget.testId),
+      ).wait;
+
+      stopwatch.stop();
+
+      final (patient, test, report) = data;
+      final valid =
+          patient != null &&
+          test != null &&
+          test.patientId == patient.id &&
+          report != null;
+
+      final seconds = stopwatch.elapsedMicroseconds / 1000000;
+
+      debugPrint(
+        'PERFORMANCE | WEB-PT02 | Patient, test and report loading | '
+        '${seconds.toStringAsFixed(3)} seconds | '
+        '${valid ? "SUCCESS" : "INCOMPLETE DATA"}',
+      );
+
+      return data;
+    } catch (_) {
+      stopwatch.stop();
+      debugPrint(
+        'PERFORMANCE | WEB-PT02 | Patient, test and report loading | ERROR',
+      );
+      rethrow;
+    }
+  }
 
   // Saves the doctor's report (draft or submitted) then reloads the page.
   Future<void> _saveReport({
@@ -69,15 +99,33 @@ class _DoctorTestAnalysisPageState extends State<DoctorTestAnalysisPage> {
     required bool submit,
   }) async {
     final doctorName = AuthService.instance.displayName ?? 'Doctor';
-    await widget.repository.submitReport(
-      patientId: widget.patientId,
-      testId: widget.testId,
-      doctorName: doctorName,
-      title: title,
-      clinicalNotes: clinicalNotes,
-      recommendations: recommendations,
-      submit: submit,
-    );
+    final stopwatch = Stopwatch()..start();
+
+    try {
+      await widget.repository.submitReport(
+        patientId: widget.patientId,
+        testId: widget.testId,
+        doctorName: doctorName,
+        title: title,
+        clinicalNotes: clinicalNotes,
+        recommendations: recommendations,
+        submit: submit,
+      );
+
+      stopwatch.stop();
+      final seconds = stopwatch.elapsedMicroseconds / 1000000;
+
+      debugPrint(
+        'PERFORMANCE | WEB-PT03 | Report saving | '
+        '${seconds.toStringAsFixed(3)} seconds | '
+        '${submit ? "SUBMITTED" : "DRAFT"} | SUCCESS',
+      );
+    } catch (_) {
+      stopwatch.stop();
+      debugPrint('PERFORMANCE | WEB-PT03 | Report saving | ERROR');
+      rethrow;
+    }
+
     if (!mounted) return;
     setState(() => _reloadToken++);
   }

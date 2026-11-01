@@ -15,16 +15,16 @@ enum StaffRole { doctor, radiologist }
 /// email by its `employeeId` field, then sign in with that email.
 class AuthService extends ChangeNotifier {
   AuthService._({FirebaseAuth? auth, FirebaseFirestore? firestore})
-      : _auth = auth ?? FirebaseAuth.instance,
-        _db = firestore ?? FirebaseFirestore.instance,
-        _loading = true,
-        _uid = null,
-        _displayName = null,
-        _email = null,
-        _employeeId = null,
-        _nationalId = null,
-        _phoneNumber = null,
-        _role = null {
+    : _auth = auth ?? FirebaseAuth.instance,
+      _db = firestore ?? FirebaseFirestore.instance,
+      _loading = true,
+      _uid = null,
+      _displayName = null,
+      _email = null,
+      _employeeId = null,
+      _nationalId = null,
+      _phoneNumber = null,
+      _role = null {
     _auth!.authStateChanges().listen(_onAuthStateChanged);
   }
 
@@ -38,16 +38,22 @@ class AuthService extends ChangeNotifier {
     String employeeId = 'EMP-0000',
     String nationalId = '',
     String phoneNumber = '',
-  })  : _auth = null,
-        _db = null,
-        _loading = false,
-        _uid = role == null ? null : 'debug-uid',
-        _displayName = role == null ? null : displayName,
-        _email = role == null ? null : email,
-        _employeeId = role == null ? null : employeeId,
-        _nationalId = role == null ? null : nationalId,
-        _phoneNumber = role == null ? null : phoneNumber,
-        _role = role;
+  }) : _auth = null,
+       _db = null,
+       _loading = false,
+       _uid = role == null ? null : 'debug-uid',
+       _displayName = role == null ? null : displayName,
+       _email = role == null ? null : email,
+       _employeeId = role == null ? null : employeeId,
+       _nationalId = role == null ? null : nationalId,
+       _phoneNumber = role == null ? null : phoneNumber,
+       _role = role;
+
+  @visibleForTesting
+  AuthService.forTesting({
+    required FirebaseAuth auth,
+    required FirebaseFirestore firestore,
+  }) : this._(auth: auth, firestore: firestore);
 
   /// The single instance the whole app reads from. Tests can swap it out
   /// with [debugSetInstance] so they never touch real Firebase.
@@ -169,8 +175,9 @@ class AuthService extends ChangeNotifier {
       return null;
     } on FirebaseAuthException catch (e) {
       return switch (e.code) {
-        'user-not-found' || 'wrong-password' || 'invalid-credential' =>
-          'Incorrect employee ID or password.',
+        'user-not-found' ||
+        'wrong-password' ||
+        'invalid-credential' => 'Incorrect employee ID or password.',
         'user-disabled' => 'This account has been disabled.',
         _ => 'Could not sign in. Please try again.',
       };
@@ -220,8 +227,8 @@ class AuthService extends ChangeNotifier {
       return null;
     } on FirebaseAuthException catch (e) {
       return switch (e.code) {
-        'wrong-password' || 'invalid-credential' =>
-          'Current password is incorrect.',
+        'wrong-password' ||
+        'invalid-credential' => 'Current password is incorrect.',
         'weak-password' => 'New password is too weak.',
         _ => 'Could not change the password. Please try again.',
       };
