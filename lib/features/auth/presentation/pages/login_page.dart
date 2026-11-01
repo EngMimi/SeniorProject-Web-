@@ -89,16 +89,38 @@ class _SignInCardState extends State<_SignInCard> {
   // Calls AuthService and shows an error snackbar if sign-in fails.
   Future<void> _onSubmit(String employeeId, String password) async {
     setState(() => _submitting = true);
-    final error = await AuthService.instance.signIn(employeeId, password);
+
+    final stopwatch = Stopwatch()..start();
+    String? error;
+
+    try {
+      error = await AuthService.instance.signIn(employeeId, password);
+      stopwatch.stop();
+
+      final seconds = stopwatch.elapsedMicroseconds / 1000000;
+
+      debugPrint(
+        'PERFORMANCE | WEB-PT01 | Sign-in service | '
+        '${seconds.toStringAsFixed(3)} seconds | '
+        '${error == null ? "SUCCESS" : "REJECTED"}',
+      );
+    } catch (_) {
+      stopwatch.stop();
+      debugPrint('PERFORMANCE | WEB-PT01 | Sign-in service | ERROR');
+      rethrow;
+    } finally {
+      if (mounted) {
+        setState(() => _submitting = false);
+      }
+    }
+
     if (!mounted) return;
-    setState(() => _submitting = false);
+
     if (error != null) {
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(SnackBar(content: Text(error)));
     }
-    // On success the router's redirect (listening to AuthService) takes the
-    // user to their dashboard automatically — nothing else to do here.
   }
 
   @override

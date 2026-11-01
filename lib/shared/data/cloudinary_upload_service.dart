@@ -9,7 +9,13 @@ import 'package:http/http.dart' as http;
 /// Uploads a file to Cloudinary using an unsigned upload preset, so no
 /// secret key is needed in the browser code.
 class CloudinaryUploadService {
-  CloudinaryUploadService._();
+  CloudinaryUploadService._({http.Client? client}) : _client = client;
+
+  // Allows tests to provide a fake HTTP client.
+  CloudinaryUploadService.forTesting(http.Client client)
+    : this._(client: client);
+
+  final http.Client? _client;
 
   static final CloudinaryUploadService instance = CloudinaryUploadService._();
 
@@ -33,7 +39,9 @@ class CloudinaryUploadService {
         http.MultipartFile.fromBytes('file', bytes, filename: filename),
       );
 
-    final streamedResponse = await request.send();
+    final streamedResponse = _client == null
+        ? await request.send()
+        : await _client.send(request);
     final response = await http.Response.fromStream(streamedResponse);
 
     if (response.statusCode != 200) {
